@@ -1,0 +1,434 @@
+{
+  "active_ronde_id": 1,
+  "rondes": [
+    {
+      "id": 1,
+      "nom": "Ronde 3 Farfadets - Sartrouville",
+      "saison": "2026 - 2027",
+      "groupe": "Groupe Saint Martin Sartrouville",
+      "peuplade": "6 - 8 ans",
+      "lieu_habituel": "Local Scout - Notre Dame du Val",
+      "membres": [
+        {
+          "id": 1,
+          "prenom": "Julien",
+          "nom": "DUBOIS",
+          "role": "Responsable",
+          "contact": "06 88 12 04 20",
+          "photo": "JD"
+        },
+        {
+          "id": 2,
+          "prenom": "Ief",
+          "nom": "BERBEN",
+          "role": "Responsable",
+          "contact": "06 15 13 67 28",
+          "photo": "IE"
+        },
+        {
+          "id": 3,
+          "prenom": "NABIL",
+          "nom": "ELABBADI",
+          "role": "Parent",
+          "contact": "",
+          "photo": "NE"
+        },
+        {
+          "id": 4,
+          "prenom": "JENINOBERT",
+          "nom": "GNANAPIRAGASAM",
+          "role": "Parent",
+          "contact": "",
+          "photo": "JG"
+        },
+        {
+          "id": 5,
+          "prenom": "LUXAYINI",
+          "nom": "GNANAPIRAGASAM",
+          "role": "Parent",
+          "contact": "",
+          "photo": "LG"
+        },
+        {
+          "id": 6,
+          "prenom": "SABRINA",
+          "nom": "HUE",
+          "role": "Parent",
+          "contact": "",
+          "photo": "SH"
+        },
+        {
+          "id": 7,
+          "prenom": "LINA",
+          "nom": "LIM",
+          "role": "Parent",
+          "contact": "",
+          "photo": "LL"
+        },
+        {
+          "id": 8,
+          "prenom": "JUSTINE",
+          "nom": "MICHEL",
+          "role": "Parent",
+          "contact": "",
+          "photo": "JM"
+        },
+        {
+          "id": 9,
+          "prenom": "TUAN HA",
+          "nom": "TRAN",
+          "role": "Parent",
+          "contact": "",
+          "photo": "TT"
+        },
+        {
+          "id": 10,
+          "prenom": "AEDAN",
+          "nom": "BERBEN",
+          "role": "Enfant",
+          "contact": "",
+          "photo": "AB"
+        },
+        {
+          "id": 11,
+          "prenom": "KAILA",
+          "nom": "DUBOIS",
+          "role": "Enfant",
+          "contact": "",
+          "photo": "KD"
+        },
+        {
+          "id": 12,
+          "prenom": "FERIEL",
+          "nom": "ELABBADI",
+          "role": "Enfant",
+          "contact": "",
+          "photo": "FE"
+        },
+        {
+          "id": 13,
+          "prenom": "LENNY",
+          "nom": "GNANAPIRAGASAM ",
+          "role": "Enfant",
+          "contact": "",
+          "photo": "LG"
+        },
+        {
+          "id": 14,
+          "prenom": "MAXENCE",
+          "nom": "HUE",
+          "role": "Enfant",
+          "contact": "",
+          "photo": "MH"
+        },
+        {
+          "id": 15,
+          "prenom": "OLIVIER",
+          "nom": "TRAN",
+          "role": "Enfant",
+          "contact": "",
+          "photo": "OT"
+        },
+        {
+          "id": 16,
+          "prenom": "Anna Rose",
+          "nom": "MESEGUER ",
+          "role": "Enfant",
+          "contact": "",
+          "photo": "AM"
+        }
+      ],
+      "rencontres": [
+        {
+          "id": 2,
+          "titre": "Fête des Grandir",
+          "type": "Rencontre ronde",
+          "date": "2026-11-08",
+          "horaire": "14:00 - 17:00",
+          "lieu": "Local Scout - Parc Municipal",
+          "lieu_adresse": "Local Scout - Parc Municipal",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Julien et IEF",
+          "statut": "À venir",
+          "description": "fvdsvddvdvd",
+          "imaginaire_rencontre": "",
+          "objectifs": "",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "08/11/2026",
+              "heure_debut": "14:00",
+              "heure_fin": "14:30",
+              "activite": "Accueil des enfants",
+              "animateur": "TOus",
+              "commentaire": "",
+              "materiels": []
+            },
+            {
+              "date": "18/10/2026",
+              "heure_debut": "14:45",
+              "heure_fin": "14:30",
+              "activite": "Fabrication d'hôtels à insectes et semis",
+              "animateur": "Parents animateurs",
+              "commentaire": "",
+              "materiels": [
+                "Bois, paille, terreau"
+              ]
+            },
+            {
+              "date": "18/10/2026",
+              "heure_debut": "16:20",
+              "heure_fin": "14:30",
+              "activite": "Goûter partagé",
+              "animateur": "Parents",
+              "commentaire": "",
+              "materiels": [
+                "Jus de fruits, compotes"
+              ]
+            },
+            {
+              "date": "18/10/2026",
+              "heure_debut": "16:50",
+              "heure_fin": "14:30",
+              "activite": "Prière des Farfadets & Envoi",
+              "animateur": "Christophe",
+              "commentaire": "",
+              "materiels": [
+                "Bougie LED"
+              ]
+            }
+          ],
+          "materiels": []
+        },
+        {
+          "id": 3,
+          "titre": "Rencontre N°1 - Thème à définir",
+          "type": "Rencontre ronde",
+          "date": "2026-11-29",
+          "horaire": "14:00 - 17:00",
+          "lieu": "Local Scout - Notre Dame du Val",
+          "lieu_adresse": "Local Scout - Notre Dame du Val",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "",
+          "statut": "À venir",
+          "description": "",
+          "imaginaire_rencontre": "",
+          "objectifs": "",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "13/10/2026",
+              "heure_debut": "14:00",
+              "heure_fin": "14:30",
+              "activite": "Accueil et cri de ronde",
+              "animateur": "",
+              "commentaire": "Rassemblement en cercle",
+              "materiels": [
+                "Foulards de ronde"
+              ]
+            },
+            {
+              "date": "13/10/2026",
+              "heure_debut": "14:30",
+              "heure_fin": "16:15",
+              "activite": "Activité principale",
+              "animateur": "",
+              "commentaire": "Jeu par sizaine",
+              "materiels": []
+            },
+            {
+              "date": "13/10/2026",
+              "heure_debut": "16:15",
+              "heure_fin": "17:00",
+              "activite": "Goûter & Bilan",
+              "animateur": "Parents",
+              "commentaire": "Nettoyage et fin",
+              "materiels": [
+                "Goûter et compotes"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Foulards de ronde",
+              "qui_amene": "",
+              "photo": ""
+            },
+            {
+              "id": 2,
+              "nom": "Goûter et compotes",
+              "qui_amene": "Parents",
+              "photo": ""
+            }
+          ]
+        }
+      ],
+      "imaginaire": "Bienvenue au village des Farfadets ! Cette année, Tom et Lou nous guident à travers la forêt enchantée pour retrouver les cinq pierres de la bienveillance : la Confiance, l'Entraide, la Curiosité, la Joie et le Respect de la Création.",
+      "imaginaire_titre": "L'Aventure des Farfadets : Les Pierres de Bienveillance",
+      "imaginaire_photos": [],
+      "supports": [
+        {
+          "id": 1,
+          "titre": "Livret Farfadet SGDF (PDF officiel)",
+          "url": "https://www.sgdf.fr",
+          "categorie": "Pédagogie",
+          "desc": "Guide officiel de la pédagogie des 6-8 ans"
+        },
+        {
+          "id": 2,
+          "titre": "Chants de ronde & Carnet de chants",
+          "url": "https://sgdf.fr/chants",
+          "categorie": "Animation",
+          "desc": "Répertoire des refrains et gestuelles scouts"
+        },
+        {
+          "id": 3,
+          "titre": "Règlement intérieur & Charte de la Ronde",
+          "url": "https://sgdf.fr/charte",
+          "categorie": "Cadre légal",
+          "desc": "Consignes de sécurité, santé et engagement parents"
+        },
+        {
+          "id": 4,
+          "titre": "Fiches activités nature et grand jeu",
+          "url": "https://sgdf.fr/activites",
+          "categorie": "Animation",
+          "desc": "Idées d'ateliers manuels et de jeux en plein air"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nom": "Ronde 2 - Farfadets Sartrouville",
+      "saison": "2026 - 2027",
+      "groupe": "Groupe Saint Martin Sartrouville",
+      "peuplade": "Peuplade des 6 - 8 ans",
+      "lieu_habituel": "Local Scout - Notre Dame du Val",
+      "membres": [
+        {
+          "id": 1,
+          "prenom": "Julien",
+          "nom": "DUBOIS",
+          "role": "Responsable",
+          "contact": "06 88 12 04 20",
+          "photo": "JD"
+        },
+        {
+          "id": 2,
+          "prenom": "Claire",
+          "nom": "MOREAU",
+          "role": "Responsable",
+          "contact": "claire@sgdf.fr",
+          "photo": "CM"
+        },
+        {
+          "id": 3,
+          "prenom": "Marc",
+          "nom": "PETIT",
+          "role": "Parent",
+          "contact": "marc@email.fr",
+          "photo": "MP"
+        },
+        {
+          "id": 4,
+          "prenom": "Lucas",
+          "nom": "PETIT",
+          "role": "Enfant",
+          "contact": "06 11 22 33 44",
+          "photo": "LP"
+        }
+      ],
+      "rencontres": [
+        {
+          "id": 1,
+          "titre": "Première rencontre de Ronde 2",
+          "type": "Rencontre ronde",
+          "date": "2026-10-18",
+          "horaire": "14:00 - 17:00",
+          "lieu": "Local Scout - Sartrouville",
+          "lieu_adresse": "Local Scout - Notre Dame du Val",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Claire MOREAU",
+          "statut": "À venir",
+          "description": "Lancement de l'année scoute pour la Ronde 2.",
+          "imaginaire_rencontre": "Rencontre avec les farfadets.",
+          "objectifs": "Faire connaissance et poser les règles de vie.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "18/10/2026",
+              "heure_debut": "14:00",
+              "heure_fin": "14:30",
+              "activite": "Accueil",
+              "animateur": "Claire MOREAU",
+              "commentaire": "Cri de ronde",
+              "materiels": [
+                "Foulards"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Foulards",
+              "qui_amene": "Claire MOREAU",
+              "photo": ""
+            }
+          ]
+        }
+      ],
+      "imaginaire": "Bienvenue au village des Farfadets !",
+      "imaginaire_titre": "L'Aventure des Farfadets",
+      "imaginaire_photos": [],
+      "supports": []
+    }
+  ],
+  "utilisateurs": [
+    {
+      "id": 1,
+      "prenom": "Julien",
+      "nom": "DUBOIS",
+      "email": "julien.dubois@sgdf.fr",
+      "mot_de_passe": "9580218ab9e8ca55b7ba4ad97c5222bde0f38ded42afb7c69941158080550473",
+      "role": "admin",
+      "membre_id": 1,
+      "rondes_autorisees": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 2,
+      "prenom": "Ief",
+      "nom": "BERBEN",
+      "email": "ief.berben@sgdf.fr",
+      "mot_de_passe": "scout123",
+      "role": "responsable",
+      "membre_id": 2,
+      "rondes_autorisees": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 3,
+      "prenom": "NABIL",
+      "nom": "ELABBADI",
+      "email": "nabil.elabbadi@email.fr",
+      "mot_de_passe": "scout123",
+      "role": "parent",
+      "membre_id": 3,
+      "rondes_autorisees": [
+        1
+      ]
+    }
+  ],
+  "google_sheet_url": "https://docs.google.com/spreadsheets/d/1yfVu4WgO21PWUzla9-SNTwnC7ZrZfp-K/edit?usp=drive_link&ouid=100161899100847525946&rtpof=true&sd=true"
+}
