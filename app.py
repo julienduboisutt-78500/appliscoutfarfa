@@ -338,12 +338,13 @@ CUSTOM_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
-    color-scheme: light !important;
+    color-scheme: light only !important;
+    supported-color-schemes: light !important;
 }
 
-html, body, [class*="css"], .stApp {
+html, body, [class*="css"], .stApp, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color-scheme: light !important;
+    color-scheme: light only !important;
     background-color: #F8FAFC !important;
     color: #0F172A !important;
 }
@@ -359,68 +360,203 @@ header[data-testid="stHeader"] {
     height: 0px !important;
 }
 
-/* Forcer les textes et titres généraux en contraste sombre */
-h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stMarkdownContainer"] p {
+/* ==========================================================================
+   MODALES, DIALOGUES ET POPUPS STREAMLIT (st.dialog, stModal, BaseWeb)
+   Résout définitivement le problème de dialogue sombre sur mobile
+   ========================================================================== */
+div[data-testid="stDialog"],
+div[data-testid="stDialog"] > div,
+div[data-testid="stDialog"] [role="dialog"],
+div[data-testid="stDialog"] [role="dialog"] > div,
+div[data-testid="stDialog"] [role="dialog"] section,
+div[data-testid="stDialog"] [data-testid="stVerticalBlock"],
+div[data-testid="stDialog"] [data-testid="stForm"],
+div[data-baseweb="modal"],
+div[data-baseweb="modal"] > div,
+div[data-baseweb="modal-body"],
+div[role="dialog"],
+div[role="dialog"] > div,
+div[role="dialog"] section,
+div[role="dialog"] [data-testid="stVerticalBlock"],
+div[role="dialog"] [data-testid="stForm"],
+.stModal,
+.stModal > div {
+    background-color: #FFFFFF !important;
     color: #0F172A !important;
+    border-color: #CBD5E1 !important;
 }
 
-/* Forcer les labels et descriptions des champs de formulaires */
+/* Titres de modales */
+div[data-testid="stDialog"] h1,
+div[data-testid="stDialog"] h2,
+div[data-testid="stDialog"] h3,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h2,
+div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] p,
+div[role="dialog"] h1,
+div[role="dialog"] h2,
+div[role="dialog"] h3,
+div[role="dialog"] [data-testid="stMarkdownContainer"] p {
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+    font-weight: 700 !important;
+}
+
+/* Bouton fermer (croix X) de la modale */
+div[data-testid="stDialog"] button[aria-label="Close"],
+div[data-testid="stDialog"] button[aria-label="Fermer"],
+div[role="dialog"] button[aria-label="Close"],
+div[role="dialog"] button[aria-label="Fermer"],
+div[role="dialog"] button svg,
+div[data-testid="stDialog"] button svg {
+    color: #1E293B !important;
+    fill: #1E293B !important;
+    stroke: #1E293B !important;
+}
+
+/* ==========================================================================
+   TEXTES, TITRES ET LABELS DE FORMULAIRES
+   Contraste sombre garanti sur fond clair
+   ========================================================================== */
+h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stMarkdownContainer"] p {
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+}
+
 [data-testid="stWidgetLabel"] label, 
 [data-testid="stWidgetLabel"] p,
 [data-testid="stWidgetLabel"] span {
     color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
     font-weight: 600 !important;
+    font-size: 14px !important;
 }
 
-.stCaption, [data-testid="stCaptionContainer"] {
+.stCaption, [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {
     color: #64748B !important;
+    -webkit-text-fill-color: #64748B !important;
 }
 
-/* Forcer les champs de saisie (inputs, textareas, selects) en fond blanc et texte sombre */
-input, textarea, [data-baseweb="input"], [data-baseweb="base-input"] {
+/* ==========================================================================
+   CHAMPS DE SAISIE (INPUTS, TEXTAREAS, NUMBER INPUTS)
+   ========================================================================== */
+input, textarea, [data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="input"] input {
     background-color: #FFFFFF !important;
     color: #0F172A !important;
-    border-color: #CBD5E1 !important;
+    -webkit-text-fill-color: #0F172A !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 8px !important;
+}
+
+input:focus, textarea:focus, [data-baseweb="input"]:focus-within {
+    border-color: #1D4ED8 !important;
+    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2) !important;
 }
 
 input::placeholder, textarea::placeholder {
     color: #94A3B8 !important;
+    -webkit-text-fill-color: #94A3B8 !important;
 }
 
-/* Menus déroulants et sélecteurs BaseWeb */
+/* ==========================================================================
+   MENUS DÉROULANTS (SELECTBOX, MULTISELECT, BASEWEB)
+   ========================================================================== */
+[data-baseweb="select"],
+[data-baseweb="select"] > div,
+[data-baseweb="select"] div {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+}
+
 [data-baseweb="select"] > div {
-    background-color: #FFFFFF !important;
-    color: #0F172A !important;
-    border-color: #CBD5E1 !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 8px !important;
 }
 
-[data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"], [role="option"] {
+[data-baseweb="select"] svg {
+    fill: #1E293B !important;
+    color: #1E293B !important;
+}
+
+[data-baseweb="popover"],
+[data-baseweb="popover"] > div,
+[data-baseweb="menu"],
+[data-baseweb="menu"] > div,
+[role="listbox"],
+[role="listbox"] > div,
+[role="option"] {
     background-color: #FFFFFF !important;
     color: #0F172A !important;
+    -webkit-text-fill-color: #0F172A !important;
+}
+
+[role="option"]:hover,
+[aria-selected="true"] {
+    background-color: #EFF6FF !important;
+    color: #1D4ED8 !important;
+    -webkit-text-fill-color: #1D4ED8 !important;
 }
 
 /* Multi-select tags */
 [data-baseweb="tag"] {
     background-color: #EFF6FF !important;
     color: #1D4ED8 !important;
+    -webkit-text-fill-color: #1D4ED8 !important;
     border: 1px solid #BFDBFE !important;
+}
+
+/* ==========================================================================
+   BOUTONS PRIMAIRES & SECONDAIRES
+   Empêche le bouton rouge par défaut de Streamlit
+   ========================================================================== */
+button[kind="primary"],
+button[data-testid="baseButton-primary"],
+.stFormSubmitButton > button,
+button[type="submit"] {
+    background-color: #1D4ED8 !important;
+    border: 1px solid #1D4ED8 !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+}
+
+button[kind="primary"]:hover,
+button[data-testid="baseButton-primary"]:hover,
+.stFormSubmitButton > button:hover {
+    background-color: #1E40AF !important;
+    border-color: #1E40AF !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+button[kind="secondary"],
+button[data-testid="baseButton-secondary"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
+    border-radius: 8px !important;
+}
+
+button[kind="secondary"]:hover,
+button[data-testid="baseButton-secondary"]:hover {
+    background-color: #F1F5F9 !important;
+    border-color: #94A3B8 !important;
+    color: #0F172A !important;
 }
 
 /* Onglets Streamlit */
 button[data-baseweb="tab"] {
     color: #64748B !important;
+    -webkit-text-fill-color: #64748B !important;
     font-weight: 600 !important;
 }
 
 button[data-baseweb="tab"][aria-selected="true"] {
     color: #1D4ED8 !important;
+    -webkit-text-fill-color: #1D4ED8 !important;
     border-bottom-color: #1D4ED8 !important;
-}
-
-/* Boîtes de dialogue / modales Streamlit */
-div[role="dialog"] {
-    background-color: #FFFFFF !important;
-    color: #0F172A !important;
 }
 
 .main .block-container {
