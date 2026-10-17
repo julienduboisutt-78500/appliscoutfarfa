@@ -337,8 +337,15 @@ CUSTOM_CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="css"] {
+:root {
+    color-scheme: light !important;
+}
+
+html, body, [class*="css"], .stApp {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light !important;
+    background-color: #F8FAFC !important;
+    color: #0F172A !important;
 }
 
 /* Masquer les barres de contrôle Streamlit pour un rendu application natif */
@@ -352,8 +359,68 @@ header[data-testid="stHeader"] {
     height: 0px !important;
 }
 
-.stApp {
-    background-color: #F8FAFC;
+/* Forcer les textes et titres généraux en contraste sombre */
+h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, [data-testid="stMarkdownContainer"] p {
+    color: #0F172A !important;
+}
+
+/* Forcer les labels et descriptions des champs de formulaires */
+[data-testid="stWidgetLabel"] label, 
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span {
+    color: #1E293B !important;
+    font-weight: 600 !important;
+}
+
+.stCaption, [data-testid="stCaptionContainer"] {
+    color: #64748B !important;
+}
+
+/* Forcer les champs de saisie (inputs, textareas, selects) en fond blanc et texte sombre */
+input, textarea, [data-baseweb="input"], [data-baseweb="base-input"] {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: #CBD5E1 !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #94A3B8 !important;
+}
+
+/* Menus déroulants et sélecteurs BaseWeb */
+[data-baseweb="select"] > div {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: #CBD5E1 !important;
+}
+
+[data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"], [role="option"] {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+}
+
+/* Multi-select tags */
+[data-baseweb="tag"] {
+    background-color: #EFF6FF !important;
+    color: #1D4ED8 !important;
+    border: 1px solid #BFDBFE !important;
+}
+
+/* Onglets Streamlit */
+button[data-baseweb="tab"] {
+    color: #64748B !important;
+    font-weight: 600 !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #1D4ED8 !important;
+    border-bottom-color: #1D4ED8 !important;
+}
+
+/* Boîtes de dialogue / modales Streamlit */
+div[role="dialog"] {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
 }
 
 .main .block-container {
@@ -1142,74 +1209,31 @@ def dialog_modifier_rencontre(rencontre_id):
                 st.session_state["flash_success"] = f"✅ Rencontre mise à jour au {format_date_fr(r['date'])} !"
                 st.rerun()
 
-    # 2. DÉROULÉ CHRONOLOGIQUE (MODIFIABLE + AJOUT DE COLONNES)
+    # 2. DÉROULÉ CHRONOLOGIQUE (TABLEAU INTERACTIF AVEC ÉCRAN MODIFIER ET ÉCRAN AJOUTER)
     elif cur_modal_tab == "⏱️ Déroulé chronologique":
-        st.markdown("#### ⏱️ Étapes du Déroulé")
+        st.markdown("#### ⏱️ Déroulé chronologique de la rencontre")
         deroule_list = r.get("deroule", [])
         custom_cols = r.setdefault("colonnes_deroule", [])
         mat_noms = [m.get("nom") for m in r.get("materiels", []) if m.get("nom")]
 
-        with st.expander("⚙️ Personnaliser les colonnes du tableau (Ajouter / Supprimer des colonnes)"):
-            st.caption("Vous pouvez ajouter des colonnes supplémentaires pour stocker toute information nécessaire (ex: Lieu précis, Consigne sécurité, Météo...).")
-            if custom_cols:
-                st.write("**Colonnes personnalisées actives :**")
-                for c_idx, col_name in enumerate(custom_cols):
-                    cc1, cc2 = st.columns([4, 1])
-                    cc1.write(f"• **{col_name}**")
-                    if cc2.button("Supprimer", key=f"del_col_{rencontre_id}_{c_idx}"):
-                        custom_cols.pop(c_idx)
-                        r["colonnes_deroule"] = custom_cols
-                        save_data(db)
-                        st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
-                        st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                        st.rerun()
+        cur_edit_step_key = f"editing_step_idx_{rencontre_id}"
+        cur_add_step_key = f"adding_step_{rencontre_id}"
+        editing_idx = st.session_state.get(cur_edit_step_key, None)
+        is_adding = st.session_state.get(cur_add_step_key, False)
+
+        # ÉCRAN 1 : MODIFICATION D'UNE LIGNE PRÉCISE DU TABLEAU
+        if editing_idx is not None and 0 <= editing_idx < len(deroule_list):
+            cur_s = deroule_list[editing_idx]
             
-            with st.form(f"form_add_col_{rencontre_id}", clear_on_submit=True):
-                nc_name = st.text_input("Nom de la nouvelle colonne", placeholder="Ex : Lieu précis")
-                if st.form_submit_button("➕ Ajouter cette colonne au tableau", type="primary"):
-                    if nc_name and nc_name.strip():
-                        clean_nc = nc_name.strip()
-                        if clean_nc not in custom_cols and clean_nc not in ["Date", "Début", "Fin", "Activité", "Animateur", "Matériels", "Commentaire"]:
-                            custom_cols.append(clean_nc)
-                            r["colonnes_deroule"] = custom_cols
-                            save_data(db)
-                            st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
-                            st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                            st.session_state["flash_success"] = f"✅ Colonne '{clean_nc}' ajoutée !"
-                            st.rerun()
-                        else:
-                            st.warning("Cette colonne existe déjà ou est un champ par défaut.")
-
-        if deroule_list:
-            df_rows = []
-            for idx, s in enumerate(deroule_list):
-                row_d = {
-                    "#": idx + 1,
-                    "Date": s.get("date", format_date_fr(r.get("date"))),
-                    "Début": s.get("heure_debut", ""),
-                    "Fin": s.get("heure_fin", ""),
-                    "Activité": s.get("activite", ""),
-                    "Animateur": s.get("animateur", ""),
-                    "Matériels": ", ".join(s.get("materiels", [])),
-                    "Commentaire": s.get("commentaire", "")
-                }
-                for c_col in custom_cols:
-                    row_d[c_col] = s.get(c_col, "")
-                df_rows.append(row_d)
-            st.dataframe(pd.DataFrame(df_rows), use_container_width=True, hide_index=True)
-
-            st.markdown("---")
-            st.markdown("##### ✏️ Modifier une étape existante")
-            step_opts = list(range(len(deroule_list)))
-            sel_edit_step = st.selectbox(
-                "Sélectionner l'étape à modifier :",
-                options=step_opts,
-                format_func=lambda i: f"Étape {i+1} : {deroule_list[i].get('heure_debut', '')}-{deroule_list[i].get('heure_fin', '')} • {deroule_list[i].get('activite', '')}",
-                key=f"sel_step_edit_{rencontre_id}"
-            )
-            cur_s = deroule_list[sel_edit_step]
-
-            with st.form(f"form_modify_step_{rencontre_id}_{sel_edit_step}"):
+            c_back, c_title = st.columns([1.2, 4])
+            with c_back:
+                if st.button("← Retour au tableau", key=f"btn_back_step_edit_{rencontre_id}", use_container_width=True):
+                    st.session_state[cur_edit_step_key] = None
+                    st.rerun()
+            with c_title:
+                st.markdown(f"##### ✏️ Modifier l'étape {editing_idx + 1} : **{cur_s.get('activite', '')}**")
+            
+            with st.form(f"form_modify_step_{rencontre_id}_{editing_idx}"):
                 col_ms1, col_ms2, col_ms3 = st.columns(3)
                 with col_ms1:
                     m_s_date = st.date_input("Date de l'étape", value=parse_date_obj(cur_s.get("date", r.get("date", date.today()))), format="DD/MM/YYYY")
@@ -1231,9 +1255,19 @@ def dialog_modifier_rencontre(rencontre_id):
                     cc_cols = st.columns(min(len(custom_cols), 3))
                     for ci, cname in enumerate(custom_cols):
                         with cc_cols[ci % 3]:
-                            m_custom_vals[cname] = st.text_input(cname, value=str(cur_s.get(cname, "")), key=f"f_edit_c_{cname}_{sel_edit_step}")
+                            m_custom_vals[cname] = st.text_input(cname, value=str(cur_s.get(cname, "")), key=f"f_edit_c_{cname}_{editing_idx}")
 
-                if st.form_submit_button("💾 Enregistrer les modifications de l'étape", type="primary", use_container_width=True):
+                col_b1, col_b2 = st.columns([3, 1])
+                with col_b1:
+                    sub_edit = st.form_submit_button("💾 Enregistrer les modifications de la ligne", type="primary", use_container_width=True)
+                with col_b2:
+                    sub_cancel = st.form_submit_button("Annuler", use_container_width=True)
+
+                if sub_cancel:
+                    st.session_state[cur_edit_step_key] = None
+                    st.rerun()
+
+                if sub_edit:
                     if not m_s_act:
                         st.error("Le nom de l'activité est obligatoire.")
                     else:
@@ -1247,24 +1281,32 @@ def dialog_modifier_rencontre(rencontre_id):
                         for cname, cval in m_custom_vals.items():
                             cur_s[cname] = cval
                         save_data(db)
+                        st.session_state[cur_edit_step_key] = None
                         st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                         st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                        st.session_state["flash_success"] = f"✅ Étape '{m_s_act}' mise à jour avec succès !"
+                        st.session_state["flash_success"] = f"✅ Étape '{m_s_act}' mise à jour dans le tableau !"
                         st.rerun()
 
-            if st.button("🗑️ Supprimer cette étape du déroulé", key=f"btn_del_cur_step_{rencontre_id}", type="secondary"):
-                deroule_list.pop(sel_edit_step)
+            if st.button("🗑️ Supprimer cette étape du déroulé", key=f"btn_del_editing_step_{rencontre_id}", type="secondary"):
+                deroule_list.pop(editing_idx)
                 r["deroule"] = deroule_list
                 save_data(db)
+                st.session_state[cur_edit_step_key] = None
                 st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                 st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
                 st.session_state["flash_success"] = "✅ Étape retirée du déroulé."
                 st.rerun()
-        else:
-            st.info("Aucune étape dans le déroulé. Ajoutez-en une ci-dessous.")
 
-        st.markdown("---")
-        with st.expander("➕ Ajouter une nouvelle étape au déroulé"):
+        # ÉCRAN 2 : SAISIE POUR AJOUTER UNE NOUVELLE LIGNE AU TABLEAU
+        elif is_adding:
+            c_back, c_title = st.columns([1.2, 4])
+            with c_back:
+                if st.button("← Retour au tableau", key=f"btn_back_step_add_{rencontre_id}", use_container_width=True):
+                    st.session_state[cur_add_step_key] = False
+                    st.rerun()
+            with c_title:
+                st.markdown(f"##### ➕ Ajouter une nouvelle étape à la suite du tableau")
+
             with st.form(f"form_add_step_{rencontre_id}", clear_on_submit=True):
                 col_s1, col_s2, col_s3 = st.columns(3)
                 with col_s1:
@@ -1287,7 +1329,17 @@ def dialog_modifier_rencontre(rencontre_id):
                         with cc_cols_add[ci % 3]:
                             new_custom_vals[cname] = st.text_input(cname, placeholder=f"Valeur pour {cname}", key=f"f_add_c_{cname}")
 
-                if st.form_submit_button("Ajouter cette étape au tableau", type="primary", use_container_width=True):
+                col_b1, col_b2 = st.columns([3, 1])
+                with col_b1:
+                    sub_add = st.form_submit_button("➕ Valider et ajouter la ligne au tableau", type="primary", use_container_width=True)
+                with col_b2:
+                    sub_canc_add = st.form_submit_button("Annuler", use_container_width=True)
+
+                if sub_canc_add:
+                    st.session_state[cur_add_step_key] = False
+                    st.rerun()
+
+                if sub_add:
                     if not step_act:
                         st.error("Le nom de l'activité est obligatoire.")
                     else:
@@ -1304,104 +1356,291 @@ def dialog_modifier_rencontre(rencontre_id):
                             new_step[cname] = cval
                         r.setdefault("deroule", []).append(new_step)
                         save_data(db)
+                        st.session_state[cur_add_step_key] = False
                         st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                         st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
                         st.session_state["flash_success"] = f"✅ Étape '{step_act}' ajoutée au déroulé !"
                         st.rerun()
 
-    # 3. LISTE DU MATÉRIEL (MODIFIABLE + REDIRECTION AUTO SUR L'ONGLET)
+        # ÉCRAN 3 : AFFICHAGE DU TABLEAU AVEC ACTIONS SUR CHAQUE LIGNE ET BOUTON D'AJOUT À LA SUITE
+        else:
+            with st.expander("⚙️ Personnaliser les colonnes du tableau (Ajouter / Supprimer des colonnes)"):
+                st.caption("Vous pouvez ajouter des colonnes supplémentaires pour stocker toute information nécessaire (ex: Lieu précis, Consigne sécurité, Météo...).")
+                if custom_cols:
+                    st.write("**Colonnes personnalisées actives :**")
+                    for c_idx, col_name in enumerate(custom_cols):
+                        cc1, cc2 = st.columns([4, 1])
+                        cc1.write(f"• **{col_name}**")
+                        if cc2.button("Supprimer", key=f"del_col_{rencontre_id}_{c_idx}"):
+                            custom_cols.pop(c_idx)
+                            r["colonnes_deroule"] = custom_cols
+                            save_data(db)
+                            st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                            st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                            st.rerun()
+                
+                with st.form(f"form_add_col_{rencontre_id}", clear_on_submit=True):
+                    nc_name = st.text_input("Nom de la nouvelle colonne", placeholder="Ex : Lieu précis")
+                    if st.form_submit_button("➕ Ajouter cette colonne au tableau", type="primary"):
+                        if nc_name and nc_name.strip():
+                            clean_nc = nc_name.strip()
+                            if clean_nc not in custom_cols and clean_nc not in ["Date", "Début", "Fin", "Activité", "Animateur", "Matériels", "Commentaire"]:
+                                custom_cols.append(clean_nc)
+                                r["colonnes_deroule"] = custom_cols
+                                save_data(db)
+                                st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                                st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                                st.session_state["flash_success"] = f"✅ Colonne '{clean_nc}' ajoutée !"
+                                st.rerun()
+                            else:
+                                st.warning("Cette colonne existe déjà ou est un champ par défaut.")
+
+            if deroule_list:
+                st.markdown("""
+                    <div style="background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px 8px 0 0; padding:10px 12px; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:4px;">
+                        <div style="display:flex; align-items:center;">
+                            <div style="width:6%;">#</div>
+                            <div style="width:16%;">Horaires</div>
+                            <div style="width:26%;">Activité & Détails</div>
+                            <div style="width:16%;">Animateur</div>
+                            <div style="width:18%;">Matériels</div>
+                            <div style="width:18%; text-align:right;">Actions</div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                for idx, s in enumerate(deroule_list):
+                    c_row = st.container()
+                    with c_row:
+                        c_num, c_hor, c_act, c_anim, c_mat, c_btn = st.columns([0.6, 1.5, 2.4, 1.4, 1.6, 1.7])
+                        with c_num:
+                            st.markdown(f"**#{idx + 1}**")
+                        with c_hor:
+                            st.markdown(f"**{s.get('heure_debut', '')} - {s.get('heure_fin', '')}**")
+                            st.caption(s.get("date", format_date_fr(r.get("date"))))
+                        with c_act:
+                            st.markdown(f"**{s.get('activite', '')}**")
+                            if s.get("commentaire"):
+                                st.caption(f"💬 {s.get('commentaire')}")
+                            for cc in custom_cols:
+                                if s.get(cc):
+                                    st.caption(f"🔹 *{cc}* : {s.get(cc)}")
+                        with c_anim:
+                            anim_name = s.get("animateur") or "-"
+                            st.markdown(f"🏕️ {anim_name}")
+                        with c_mat:
+                            mats_step = s.get("materiels", [])
+                            if mats_step:
+                                mats_txt = ", ".join(mats_step)
+                                st.markdown(f'<span style="background:#EFF6FF; color:#1D4ED8; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:600;">🎒 {mats_txt}</span>', unsafe_allow_html=True)
+                            else:
+                                st.caption("Aucun")
+                        with c_btn:
+                            cb1, cb2 = st.columns([2, 1])
+                            with cb1:
+                                if st.button("✏️ Modifier", key=f"btn_edit_step_line_{rencontre_id}_{idx}", use_container_width=True):
+                                    st.session_state[cur_edit_step_key] = idx
+                                    st.session_state[cur_add_step_key] = False
+                                    st.rerun()
+                            with cb2:
+                                if st.button("🗑️", key=f"btn_del_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Supprimer cette étape"):
+                                    deroule_list.pop(idx)
+                                    r["deroule"] = deroule_list
+                                    save_data(db)
+                                    st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                                    st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                                    st.session_state["flash_success"] = "🗑️ Étape supprimée."
+                                    st.rerun()
+                        st.markdown('<hr style="margin:4px 0 8px 0; border:0; border-top:1px solid #E2E8F0;">', unsafe_allow_html=True)
+            else:
+                st.info("Aucune étape dans le déroulé de cette rencontre.")
+
+            # BOUTON AJOUTER À LA SUITE DU TABLEAU
+            st.write("")
+            if st.button("➕ Ajouter une étape à la suite du tableau", type="primary", use_container_width=True, key=f"btn_trigger_add_step_{rencontre_id}"):
+                st.session_state[cur_add_step_key] = True
+                st.session_state[cur_edit_step_key] = None
+                st.rerun()
+
+    # 3. LISTE DU MATÉRIEL (TABLEAU INTERACTIF AVEC ÉCRAN MODIFIER ET ÉCRAN AJOUTER)
     elif cur_modal_tab == "🎒 Liste du Matériel & Photos":
         st.markdown("#### 🎒 Matériels de la rencontre")
         mats_list = r.get("materiels", [])
         membres_noms = [f"{mb['prenom']} {mb['nom']}" for mb in current_ronde.get("membres", [])]
         qui_options = ["Parents", "Animateurs", "Tous"] + membres_noms
 
-        if mats_list:
-            for m_idx, m in enumerate(mats_list):
-                with st.container():
-                    c_m_card1, c_m_card2 = st.columns([1, 5])
-                    with c_m_card1:
-                        if m.get("photo"):
-                            st.markdown(f'<img src="{m["photo"]}" style="width:58px; height:58px; object-fit:cover; border-radius:8px; border:1px solid #E2E8F0;">', unsafe_allow_html=True)
-                        else:
-                            st.markdown('<div style="width:58px; height:58px; background:#EFF6FF; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:26px;">📦</div>', unsafe_allow_html=True)
-                    with c_m_card2:
-                        rem_str = f" • *{m.get('remarque', '')}*" if m.get("remarque") else ""
-                        st.markdown(f"**{m.get('nom')}** — Apporté par : **{m.get('qui_amene', 'Non assigné')}**{rem_str}")
-                        
-                        with st.expander(f"✏️ Modifier les informations de : {m.get('nom')}"):
-                            with st.form(f"form_edit_mat_{rencontre_id}_{m_idx}"):
-                                em1, em2 = st.columns(2)
-                                with em1:
-                                    edit_m_nom = st.text_input("Nom du matériel *", value=m.get("nom", ""))
-                                    q_idx = qui_options.index(m.get("qui_amene")) if m.get("qui_amene") in qui_options else 0
-                                    edit_m_qui = st.selectbox("Qui l'amène ?", options=qui_options, index=q_idx)
-                                with em2:
-                                    edit_m_rem = st.text_input("Quantité / Précision", value=m.get("remarque", m.get("quantite", "")))
-                                    edit_m_file = st.file_uploader("Photo du matériel", type=["png", "jpg", "jpeg"], key=f"f_mat_up_{rencontre_id}_{m_idx}")
-                                    edit_m_url = st.text_input("Ou lien / URL de l'image", value=m.get("photo", "") if not m.get("photo", "").startswith("data:") else "", key=f"f_mat_url_{rencontre_id}_{m_idx}")
-                                
-                                if st.form_submit_button("💾 Enregistrer les modifications du matériel", type="primary", use_container_width=True):
-                                    if not edit_m_nom:
-                                        st.error("Le nom du matériel est requis.")
-                                    else:
-                                        m["nom"] = edit_m_nom
-                                        m["qui_amene"] = edit_m_qui
-                                        m["remarque"] = edit_m_rem
-                                        m["quantite"] = edit_m_rem
-                                        if edit_m_file is not None:
-                                            m["photo"] = file_to_base64(edit_m_file)
-                                        elif edit_m_url:
-                                            m["photo"] = edit_m_url
-                                        save_data(db)
-                                        st.session_state[f"_force_tab_{rencontre_id}"] = "🎒 Liste du Matériel & Photos"
-                                        st.session_state[cur_tab_key] = "🎒 Liste du Matériel & Photos"
-                                        st.session_state["flash_success"] = f"✅ Matériel '{edit_m_nom}' mis à jour !"
-                                        st.rerun()
+        cur_edit_mat_key = f"editing_mat_idx_{rencontre_id}"
+        cur_add_mat_key = f"adding_mat_{rencontre_id}"
+        editing_m_idx = st.session_state.get(cur_edit_mat_key, None)
+        is_adding_mat = st.session_state.get(cur_add_mat_key, False)
 
-                        if st.button("🗑️ Supprimer ce matériel", key=f"del_mat_{m_idx}_{rencontre_id}", type="secondary"):
-                            mats_list.pop(m_idx)
-                            r["materiels"] = mats_list
-                            save_data(db)
-                            st.session_state[f"_force_tab_{rencontre_id}"] = "🎒 Liste du Matériel & Photos"
-                            st.session_state[cur_tab_key] = "🎒 Liste du Matériel & Photos"
-                            st.session_state["flash_success"] = "✅ Matériel supprimé."
-                            st.rerun()
-
-                    st.write("")
-        else:
-            st.info("Aucun matériel enregistré pour cette rencontre.")
-
-        st.markdown("---")
-        st.markdown("##### ➕ Ajouter un matériel à la liste")
-        with st.form(f"form_add_mat_{rencontre_id}", clear_on_submit=True):
-            col_add_m1, col_add_m2 = st.columns(2)
-            with col_add_m1:
-                m_nom = st.text_input("Nom du matériel *", placeholder="Ex : 10 boussoles et 5 balises")
-                m_qui = st.selectbox("Qui l'amène ?", options=qui_options)
-            with col_add_m2:
-                m_rem = st.text_input("Quantité / Remarque", placeholder="Ex : 1 par sizaine")
-                m_file = st.file_uploader("Photo du matériel (optionnel)", type=["png", "jpg", "jpeg"])
-                m_url = st.text_input("Ou lien de l'image / photo", placeholder="https://...")
-
-            if st.form_submit_button("Ajouter ce matériel", type="primary", use_container_width=True):
-                if not m_nom:
-                    st.error("Le nom du matériel est requis.")
-                else:
-                    photo_val = file_to_base64(m_file) or m_url or ""
-                    r.setdefault("materiels", []).append({
-                        "id": len(mats_list) + 1,
-                        "nom": m_nom,
-                        "qui_amene": m_qui,
-                        "remarque": m_rem,
-                        "quantite": m_rem,
-                        "photo": photo_val
-                    })
-                    save_data(db)
-                    st.session_state[f"_force_tab_{rencontre_id}"] = "🎒 Liste du Matériel & Photos"
-                    st.session_state[cur_tab_key] = "🎒 Liste du Matériel & Photos"
-                    st.session_state["flash_success"] = f"✅ Matériel '{m_nom}' ajouté à la rencontre !"
+        # ÉCRAN 1 : MODIFIER UN MATÉRIEL EXISTANT
+        if editing_m_idx is not None and 0 <= editing_m_idx < len(mats_list):
+            m = mats_list[editing_m_idx]
+            c_back, c_title = st.columns([1.2, 4])
+            with c_back:
+                if st.button("← Retour au tableau", key=f"btn_back_mat_edit_{rencontre_id}", use_container_width=True):
+                    st.session_state[cur_edit_mat_key] = None
                     st.rerun()
+            with c_title:
+                st.markdown(f"##### ✏️ Modifier le matériel : **{m.get('nom', '')}**")
+
+            with st.form(f"form_edit_mat_{rencontre_id}_{editing_m_idx}"):
+                em1, em2 = st.columns(2)
+                with em1:
+                    edit_m_nom = st.text_input("Nom du matériel *", value=m.get("nom", ""))
+                    q_idx = qui_options.index(m.get("qui_amene")) if m.get("qui_amene") in qui_options else 0
+                    edit_m_qui = st.selectbox("Qui l'amène ?", options=qui_options, index=q_idx)
+                with em2:
+                    edit_m_rem = st.text_input("Quantité / Précision", value=m.get("remarque", m.get("quantite", "")))
+                    edit_m_file = st.file_uploader("Photo du matériel", type=["png", "jpg", "jpeg"], key=f"f_mat_up_{rencontre_id}_{editing_m_idx}")
+                    edit_m_url = st.text_input("Ou lien / URL de l'image", value=m.get("photo", "") if not m.get("photo", "").startswith("data:") else "", key=f"f_mat_url_{rencontre_id}_{editing_m_idx}")
+                
+                col_b1, col_b2 = st.columns([3, 1])
+                with col_b1:
+                    sub_m_edit = st.form_submit_button("💾 Enregistrer les modifications du matériel", type="primary", use_container_width=True)
+                with col_b2:
+                    sub_m_canc = st.form_submit_button("Annuler", use_container_width=True)
+
+                if sub_m_canc:
+                    st.session_state[cur_edit_mat_key] = None
+                    st.rerun()
+
+                if sub_m_edit:
+                    if not edit_m_nom:
+                        st.error("Le nom du matériel est requis.")
+                    else:
+                        m["nom"] = edit_m_nom
+                        m["qui_amene"] = edit_m_qui
+                        m["remarque"] = edit_m_rem
+                        m["quantite"] = edit_m_rem
+                        if edit_m_file is not None:
+                            m["photo"] = file_to_base64(edit_m_file)
+                        elif edit_m_url:
+                            m["photo"] = edit_m_url
+                        save_data(db)
+                        st.session_state[cur_edit_mat_key] = None
+                        st.session_state[f"_force_tab_{rencontre_id}"] = "🎒 Liste du Matériel & Photos"
+                        st.session_state[cur_tab_key] = "🎒 Liste du Matériel & Photos"
+                        st.session_state["flash_success"] = f"✅ Matériel '{edit_m_nom}' mis à jour !"
+                        st.rerun()
+
+            if st.button("🗑️ Supprimer ce matériel", key=f"del_mat_editing_{rencontre_id}", type="secondary"):
+                mats_list.pop(editing_m_idx)
+                r["materiels"] = mats_list
+                save_data(db)
+                st.session_state[cur_edit_mat_key] = None
+                st.session_state[f"_force_tab_{rencontre_id}"] = "🎒 Liste du Matériel & Photos"
+                st.session_state[cur_tab_key] = "🎒 Liste du Matériel & Photos"
+                st.session_state["flash_success"] = "✅ Matériel supprimé."
+                st.rerun()
+
+        # ÉCRAN 2 : AJOUTER UN NOUVEAU MATÉRIEL
+        elif is_adding_mat:
+            c_back, c_title = st.columns([1.2, 4])
+            with c_back:
+                if st.button("← Retour au tableau", key=f"btn_back_mat_add_{rencontre_id}", use_container_width=True):
+                    st.session_state[cur_add_mat_key] = False
+                    st.rerun()
+            with c_title:
+                st.markdown("##### ➕ Ajouter un nouveau matériel au tableau")
+
+            with st.form(f"form_add_mat_{rencontre_id}", clear_on_submit=True):
+                col_add_m1, col_add_m2 = st.columns(2)
+                with col_add_m1:
+                    m_nom = st.text_input("Nom du matériel *", placeholder="Ex : 10 boussoles et 5 balises")
+                    m_qui = st.selectbox("Qui l'amène ?", options=qui_options)
+                with col_add_m2:
+                    m_rem = st.text_input("Quantité / Remarque", placeholder="Ex : 1 par sizaine")
+                    m_file = st.file_uploader("Photo du matériel (optionnel)", type=["png", "jpg", "jpeg"])
+                    m_url = st.text_input("Ou lien de l'image / photo", placeholder="https://...")
+
+                col_b1, col_b2 = st.columns([3, 1])
+                with col_b1:
+                    sub_m_add = st.form_submit_button("➕ Valider et ajouter le matériel au tableau", type="primary", use_container_width=True)
+                with col_b2:
+                    sub_m_add_canc = st.form_submit_button("Annuler", use_container_width=True)
+
+                if sub_m_add_canc:
+                    st.session_state[cur_add_mat_key] = False
+                    st.rerun()
+
+                if sub_m_add:
+                    if not m_nom:
+                        st.error("Le nom du matériel est requis.")
+                    else:
+                        photo_val = file_to_base64(m_file) or m_url or ""
+                        r.setdefault("materiels", []).append({
+                            "id": len(mats_list) + 1,
+                            "nom": m_nom,
+                            "qui_amene": m_qui,
+                            "remarque": m_rem,
+                            "quantite": m_rem,
+                            "photo": photo_val
+                        })
+                        save_data(db)
+                        st.session_state[cur_add_mat_key] = False
+                        st.session_state[f"_force_tab_{rencontre_id}"] = "🎒 Liste du Matériel & Photos"
+                        st.session_state[cur_tab_key] = "🎒 Liste du Matériel & Photos"
+                        st.session_state["flash_success"] = f"✅ Matériel '{m_nom}' ajouté à la rencontre !"
+                        st.rerun()
+
+        # ÉCRAN 3 : AFFICHAGE DU TABLEAU DU MATÉRIEL AVEC ACTIONS SUR CHAQUE LIGNE ET BOUTON D'AJOUT À LA SUITE
+        else:
+            if mats_list:
+                st.markdown("""
+                    <div style="background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px 8px 0 0; padding:10px 12px; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:4px;">
+                        <div style="display:flex; align-items:center;">
+                            <div style="width:10%;">Photo</div>
+                            <div style="width:32%;">Nom du matériel</div>
+                            <div style="width:22%;">Qui l'amène ?</div>
+                            <div style="width:20%;">Quantité / Remarque</div>
+                            <div style="width:16%; text-align:right;">Actions</div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                for m_idx, m in enumerate(mats_list):
+                    c_row = st.container()
+                    with c_row:
+                        c_ph, c_name, c_qui, c_rem, c_act = st.columns([1, 3.2, 2.2, 2, 1.6])
+                        with c_ph:
+                            if m.get("photo"):
+                                st.markdown(f'<img src="{m["photo"]}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #CBD5E1;">', unsafe_allow_html=True)
+                            else:
+                                st.markdown('<div style="width:40px; height:40px; background:#EFF6FF; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:20px;">📦</div>', unsafe_allow_html=True)
+                        with c_name:
+                            st.markdown(f"**{m.get('nom', '')}**")
+                        with c_qui:
+                            st.markdown(f'<span style="background:#DBEAFE; color:#1E40AF; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:12px;">👤 {m.get("qui_amene", "Non assigné")}</span>', unsafe_allow_html=True)
+                        with c_rem:
+                            rem_text = m.get("remarque") or m.get("quantite") or "-"
+                            st.caption(rem_text)
+                        with c_act:
+                            cb1, cb2 = st.columns([2, 1])
+                            with cb1:
+                                if st.button("✏️ Modifier", key=f"btn_edit_mat_row_{rencontre_id}_{m_idx}", use_container_width=True):
+                                    st.session_state[cur_edit_mat_key] = m_idx
+                                    st.session_state[cur_add_mat_key] = False
+                                    st.rerun()
+                            with cb2:
+                                if st.button("🗑️", key=f"btn_del_mat_row_{rencontre_id}_{m_idx}", use_container_width=True, help="Supprimer ce matériel"):
+                                    mats_list.pop(m_idx)
+                                    r["materiels"] = mats_list
+                                    save_data(db)
+                                    st.session_state[f"_force_tab_{rencontre_id}"] = "🎒 Liste du Matériel & Photos"
+                                    st.session_state[cur_tab_key] = "🎒 Liste du Matériel & Photos"
+                                    st.session_state["flash_success"] = "🗑️ Matériel supprimé."
+                                    st.rerun()
+                        st.markdown('<hr style="margin:4px 0 8px 0; border:0; border-top:1px solid #E2E8F0;">', unsafe_allow_html=True)
+            else:
+                st.info("Aucun matériel enregistré pour cette rencontre.")
+
+            st.write("")
+            if st.button("➕ Ajouter un matériel à la suite du tableau", type="primary", use_container_width=True, key=f"btn_trigger_add_mat_{rencontre_id}"):
+                st.session_state[cur_add_mat_key] = True
+                st.session_state[cur_edit_mat_key] = None
+                st.rerun()
 
     # 4. DESCRIPTION & OBJECTIFS
     elif cur_modal_tab == "📝 Description & Objectifs":
@@ -1499,6 +1738,34 @@ def dialog_supprimer_membre(membre_id):
     with c2:
         if st.button("Annuler", use_container_width=True):
             st.rerun()
+
+@st.dialog("➕ Inscrire un membre")
+def dialog_inscrire_membre():
+    with st.form("form_dialog_add_member", clear_on_submit=True):
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            p_prenom = st.text_input("Prénom *")
+            p_nom = st.text_input("Nom *")
+        with col_p2:
+            p_role = st.selectbox("Rôle", ["Enfant", "Parent", "Responsable", "Invité"])
+            p_contact = st.text_input("Contact (tél ou email)")
+
+        if st.form_submit_button("Ajouter à la ronde", type="primary", use_container_width=True):
+            if p_prenom and p_nom:
+                new_m_id = max([x["id"] for x in current_ronde.get("membres", [])], default=0) + 1
+                current_ronde.setdefault("membres", []).append({
+                    "id": new_m_id,
+                    "prenom": p_prenom,
+                    "nom": p_nom,
+                    "role": p_role,
+                    "contact": p_contact,
+                    "photo": f"{p_prenom[:1]}{p_nom[:1]}".upper()
+                })
+                save_data(db)
+                st.session_state["flash_success"] = f"✅ Membre {p_prenom} {p_nom} ajouté avec succès !"
+                st.rerun()
+            else:
+                st.error("Le prénom et le nom sont obligatoires.")
 
 # ----------------- MODALES DOCUMENTS -----------------
 @st.dialog("✏️ Modifier le document / support")
@@ -2093,6 +2360,11 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
         else:
             st.info("Aucun membre inscrit dans cette ronde.")
 
+        if is_responsable_or_admin():
+            st.write("")
+            if st.button("➕ Inscrire un membre à la suite de la liste", type="primary", use_container_width=True, key="btn_add_member_from_list"):
+                dialog_inscrire_membre()
+
     with tab_add_m:
         if not is_responsable_or_admin():
             st.info("ℹ️ L'inscription d'un nouveau membre est réservée aux animateurs et administrateurs.")
@@ -2353,99 +2625,62 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
         st.caption("Chaque compte est rattaché à une personne du groupe et dispose d'un rôle (Admin, Responsable, Parent).")
         
         users_list = db.get("utilisateurs", [])
-        df_u = pd.DataFrame([
-            {
-                "ID": u.get("id"),
-                "Prénom": u.get("prenom"),
-                "Nom": u.get("nom"),
-                "E-mail": u.get("email"),
-                "Rôle": u.get("role", "").upper(),
-                "Mot de passe": "••••••••",
-                "Membre ID": u.get("membre_id")
-            } for u in users_list
-        ])
-        st.dataframe(df_u, use_container_width=True, hide_index=True)
+        cur_edit_u_id = st.session_state.get("p_user_editing_id", None)
+        is_adding_u = st.session_state.get("p_user_adding", False)
 
-        st.markdown("---")
-        st.markdown("##### ➕ Créer un nouvel utilisateur")
-        st.caption("Les nouveaux accès sont configurés exclusivement depuis cet écran administrateur.")
-        with st.form("form_add_new_user", clear_on_submit=True):
-            col_nu1, col_nu2 = st.columns(2)
-            with col_nu1:
-                u_prenom = st.text_input("Prénom *")
-                u_nom = st.text_input("Nom *")
-                u_email = st.text_input("Adresse e-mail *")
-            with col_nu2:
-                u_role = st.selectbox("Rôle d'accès *", ["parent", "responsable", "admin"], format_func=lambda x: "👑 Administrateur" if x=="admin" else ("🏕️ Responsable Farfadets" if x=="responsable" else "👨‍👩‍👧 Parent"))
-                u_pwd = st.text_input("Mot de passe *", type="password", value="scout123")
-                membres_opt = [f"{mb['id']} - {mb['prenom']} {mb['nom']}" for mb in current_ronde.get("membres", [])]
-                sel_mb_link = st.selectbox("Rattacher à un membre du groupe :", membres_opt) if membres_opt else None
+        # Mapping membre_id -> Nom complet du membre
+        all_membres_map = {}
+        membres_choices = []
+        for r_item in db.get("rondes", []):
+            for mb_item in r_item.get("membres", []):
+                mb_label = f"{mb_item.get('id')} - {mb_item.get('prenom')} {mb_item.get('nom')} ({r_item.get('nom')})"
+                all_membres_map[mb_item.get("id")] = f"{mb_item.get('prenom')} {mb_item.get('nom')}"
+                membres_choices.append({
+                    "id": mb_item.get("id"),
+                    "label": mb_label
+                })
 
-            if st.form_submit_button("Enregistrer cet utilisateur", type="primary", use_container_width=True):
-                if u_prenom and u_nom and u_email:
-                    link_id = int(sel_mb_link.split("-")[0].strip()) if sel_mb_link else 1
-                    new_u_id = max([x.get("id", 0) for x in users_list], default=0) + 1
-                    db.setdefault("utilisateurs", []).append({
-                        "id": new_u_id,
-                        "prenom": u_prenom,
-                        "nom": u_nom,
-                        "email": u_email,
-                        "mot_de_passe": hash_password(u_pwd),
-                        "role": u_role,
-                        "membre_id": link_id,
-                        "rondes_autorisees": [current_ronde["id"]]
-                    })
-                    save_data(db)
-                    st.session_state["flash_success"] = f"✅ Utilisateur {u_prenom} {u_nom} ({u_role}) enregistré !"
-                    st.rerun()
-                else:
-                    st.error("Tous les champs obligatoires doivent être renseignés.")
+        seen_labels = set()
+        unique_mb_choices = []
+        for m_ch in membres_choices:
+            if m_ch["label"] not in seen_labels:
+                seen_labels.add(m_ch["label"])
+                unique_mb_choices.append(m_ch)
+        mb_labels = [m["label"] for m in unique_mb_choices]
 
-        st.markdown("---")
-        st.markdown("##### ✏️ Modifier les informations d'un utilisateur existant")
-        st.caption("Modifiez l'identité, l'adresse e-mail, le rôle d'accès, le membre rattaché, les rondes autorisées ou modifiez le mot de passe.")
-        if users_list:
-            u_edit_map = {f"{u['id']} - {u.get('prenom', '')} {u.get('nom', '')} ({u.get('email', '')}) [{u.get('role', '').upper()}]": u['id'] for u in users_list}
-            sel_u_label = st.selectbox("Sélectionner l'utilisateur à modifier :", list(u_edit_map.keys()), key="sel_user_to_edit_profile")
-            target_edit_id = u_edit_map[sel_u_label]
-            target_user = next((u for u in users_list if u.get("id") == target_edit_id), None)
+        all_rondes = db.get("rondes", [])
+        ronde_id_to_name = {r["id"]: r.get("nom", f"Ronde {r['id']}") for r in all_rondes}
 
+        # ÉCRAN 1 : MODIFICATION D'UN UTILISATEUR DEPUIS SA LIGNE
+        if cur_edit_u_id is not None:
+            target_user = next((u for u in users_list if u.get("id") == cur_edit_u_id), None)
             if target_user:
-                with st.form(f"form_edit_user_{target_edit_id}"):
+                c_back, c_title = st.columns([1.2, 4])
+                with c_back:
+                    if st.button("← Retour au tableau", key="btn_back_u_edit", use_container_width=True):
+                        st.session_state["p_user_editing_id"] = None
+                        st.rerun()
+                with c_title:
+                    st.markdown(f"##### ✏️ Modifier l'utilisateur : **{target_user.get('prenom', '')} {target_user.get('nom', '')}** (ID #{target_user.get('id')})")
+
+                with st.form(f"form_edit_user_{cur_edit_u_id}"):
                     col_ed1, col_ed2 = st.columns(2)
                     with col_ed1:
                         ed_prenom = st.text_input("Prénom *", value=target_user.get("prenom", ""))
                         ed_nom = st.text_input("Nom *", value=target_user.get("nom", ""))
                         ed_email = st.text_input("Adresse e-mail (identifiant) *", value=target_user.get("email", ""))
-                        ed_new_pwd = st.text_input("Nouveau mot de passe (optionnel)", type="password", placeholder="Laisser vide pour conserver l'actuel")
+                        ed_new_pwd = st.text_input("Nouveau mot de passe (optionnel)", type="password", placeholder="Laisser vide pour conserver l'actuel", help="Saisissez un nouveau mot de passe (min. 4 car.) uniquement si vous souhaitez le réinitialiser.")
                     with col_ed2:
                         roles_opts = ["parent", "responsable", "admin"]
                         current_role = target_user.get("role", "parent").lower()
                         role_index = roles_opts.index(current_role) if current_role in roles_opts else 0
                         ed_role = st.selectbox(
-                            "Rôle d'accès *", 
-                            roles_opts, 
+                            "Rôle d'accès *",
+                            roles_opts,
                             index=role_index,
                             format_func=lambda x: "👑 Administrateur" if x=="admin" else ("🏕️ Responsable Farfadets" if x=="responsable" else "👨‍👩‍👧 Parent")
                         )
-                        
-                        # Membre rattaché
-                        membres_choices = []
-                        for r_item in db.get("rondes", []):
-                            for mb_item in r_item.get("membres", []):
-                                membres_choices.append({
-                                    "id": mb_item.get("id"),
-                                    "label": f"{mb_item.get('id')} - {mb_item.get('prenom')} {mb_item.get('nom')} ({r_item.get('nom')})"
-                                })
-                        
-                        seen_labels = set()
-                        unique_mb_choices = []
-                        for m_ch in membres_choices:
-                            if m_ch["label"] not in seen_labels:
-                                seen_labels.add(m_ch["label"])
-                                unique_mb_choices.append(m_ch)
-                        
-                        mb_labels = [m["label"] for m in unique_mb_choices]
+
                         mb_idx = 0
                         for idx_m, m_ch in enumerate(unique_mb_choices):
                             if m_ch["id"] == target_user.get("membre_id"):
@@ -2453,16 +2688,13 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                                 break
                         sel_mb_label = st.selectbox("Rattacher à un membre du groupe :", mb_labels, index=mb_idx) if mb_labels else None
 
-                        # Rondes autorisées
-                        all_rondes = db.get("rondes", [])
-                        ronde_id_to_name = {r["id"]: r.get("nom", f"Ronde {r['id']}") for r in all_rondes}
                         user_curr_rondes = target_user.get("rondes_autorisees", [current_ronde["id"]])
                         if not isinstance(user_curr_rondes, list):
                             user_curr_rondes = [current_ronde["id"]]
                         default_rondes = [rid for rid in user_curr_rondes if rid in ronde_id_to_name]
                         if not default_rondes and all_rondes:
                             default_rondes = [all_rondes[0]["id"]]
-                        
+
                         ed_rondes = st.multiselect(
                             "Rondes autorisées :",
                             options=list(ronde_id_to_name.keys()),
@@ -2470,10 +2702,20 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                             format_func=lambda rid: ronde_id_to_name.get(rid, f"Ronde {rid}")
                         )
 
-                    if st.form_submit_button("💾 Enregistrer les modifications de l'utilisateur", type="primary", use_container_width=True):
+                    col_b1, col_b2 = st.columns([3, 1])
+                    with col_b1:
+                        sub_edit = st.form_submit_button("💾 Enregistrer les modifications de l'utilisateur", type="primary", use_container_width=True)
+                    with col_b2:
+                        sub_cancel = st.form_submit_button("Annuler", use_container_width=True)
+
+                    if sub_cancel:
+                        st.session_state["p_user_editing_id"] = None
+                        st.rerun()
+
+                    if sub_edit:
                         if not ed_prenom.strip() or not ed_nom.strip() or not ed_email.strip():
                             st.error("Le prénom, le nom et l'adresse e-mail sont obligatoires.")
-                        elif any(u.get("id") != target_edit_id and u.get("email", "").strip().lower() == ed_email.strip().lower() for u in users_list):
+                        elif any(u.get("id") != cur_edit_u_id and u.get("email", "").strip().lower() == ed_email.strip().lower() for u in users_list):
                             st.error("Cette adresse e-mail est déjà attribuée à un autre compte.")
                         elif ed_new_pwd and len(ed_new_pwd) < 4:
                             st.error("Le mot de passe doit comporter au moins 4 caractères.")
@@ -2488,50 +2730,158 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                             if ed_new_pwd:
                                 target_user["mot_de_passe"] = hash_password(ed_new_pwd)
 
-                            if logged_user.get("id") == target_edit_id:
+                            if logged_user.get("id") == cur_edit_u_id:
                                 st.session_state["logged_user"] = target_user
 
                             save_data(db)
+                            st.session_state["p_user_editing_id"] = None
                             st.session_state["flash_success"] = f"✅ Utilisateur {ed_prenom} {ed_nom} mis à jour avec succès !"
                             st.rerun()
 
-        st.markdown("---")
-        st.markdown("##### 🔑 Réinitialiser le mot de passe d'un utilisateur")
-        if users_list:
-            u_reset_opts = [f"{u['id']} - {u['prenom']} {u['nom']} ({u.get('email')})" for u in users_list]
-            with st.form("form_admin_reset_user_pwd", clear_on_submit=True):
-                c_rp1, c_rp2 = st.columns(2)
-                with c_rp1:
-                    sel_u_rp = st.selectbox("Sélectionner le compte :", u_reset_opts)
-                with c_rp2:
-                    new_u_rp_pwd = st.text_input("Nouveau mot de passe", type="password", placeholder="••••••••")
-                
-                if st.form_submit_button("Valider la réinitialisation du mot de passe", type="primary", use_container_width=True):
-                    if not new_u_rp_pwd or len(new_u_rp_pwd) < 4:
+                if cur_edit_u_id != logged_user.get("id"):
+                    st.write("")
+                    if st.button("🗑️ Supprimer définitivement cet utilisateur", key=f"btn_del_editing_u_{cur_edit_u_id}", type="secondary"):
+                        db["utilisateurs"] = [x for x in db["utilisateurs"] if x.get("id") != cur_edit_u_id]
+                        save_data(db)
+                        st.session_state["p_user_editing_id"] = None
+                        st.session_state["flash_success"] = "🗑️ Compte utilisateur supprimé avec succès."
+                        st.rerun()
+            else:
+                st.session_state["p_user_editing_id"] = None
+                st.rerun()
+
+        # ÉCRAN 2 : SAISIE POUR AJOUTER UN NOUVEL UTILISATEUR À LA SUITE DU TABLEAU
+        elif is_adding_u:
+            c_back, c_title = st.columns([1.2, 4])
+            with c_back:
+                if st.button("← Retour au tableau", key="btn_back_u_add", use_container_width=True):
+                    st.session_state["p_user_adding"] = False
+                    st.rerun()
+            with c_title:
+                st.markdown("##### ➕ Ajouter un nouvel utilisateur à la suite du tableau")
+
+            with st.form("form_add_new_user_screen", clear_on_submit=True):
+                col_nu1, col_nu2 = st.columns(2)
+                with col_nu1:
+                    u_prenom = st.text_input("Prénom *")
+                    u_nom = st.text_input("Nom *")
+                    u_email = st.text_input("Adresse e-mail (identifiant) *")
+                    u_pwd = st.text_input("Mot de passe initial *", type="password", value="scout123")
+                with col_nu2:
+                    u_role = st.selectbox(
+                        "Rôle d'accès *", 
+                        ["parent", "responsable", "admin"], 
+                        format_func=lambda x: "👑 Administrateur" if x=="admin" else ("🏕️ Responsable Farfadets" if x=="responsable" else "👨‍👩‍👧 Parent")
+                    )
+                    sel_mb_link = st.selectbox("Rattacher à un membre du groupe :", mb_labels) if mb_labels else None
+                    new_rondes = st.multiselect(
+                        "Rondes autorisées :",
+                        options=list(ronde_id_to_name.keys()),
+                        default=[current_ronde["id"]],
+                        format_func=lambda rid: ronde_id_to_name.get(rid, f"Ronde {rid}")
+                    )
+
+                col_b1, col_b2 = st.columns([3, 1])
+                with col_b1:
+                    sub_add_u = st.form_submit_button("➕ Enregistrer cet utilisateur et l'ajouter au tableau", type="primary", use_container_width=True)
+                with col_b2:
+                    sub_canc_u = st.form_submit_button("Annuler", use_container_width=True)
+
+                if sub_canc_u:
+                    st.session_state["p_user_adding"] = False
+                    st.rerun()
+
+                if sub_add_u:
+                    if not u_prenom.strip() or not u_nom.strip() or not u_email.strip():
+                        st.error("Le prénom, le nom et l'adresse e-mail sont obligatoires.")
+                    elif any(u.get("email", "").strip().lower() == u_email.strip().lower() for u in users_list):
+                        st.error("Cette adresse e-mail est déjà utilisée par un autre compte.")
+                    elif len(u_pwd) < 4:
                         st.error("Le mot de passe doit comporter au moins 4 caractères.")
                     else:
-                        rp_id = int(sel_u_rp.split("-")[0].strip())
-                        target_to_reset = next((u for u in db["utilisateurs"] if u.get("id") == rp_id), None)
-                        if target_to_reset:
-                            target_to_reset["mot_de_passe"] = hash_password(new_u_rp_pwd)
-                            save_data(db)
-                            st.session_state["flash_success"] = f"✅ Mot de passe mis à jour pour {target_to_reset['prenom']} {target_to_reset['nom']} !"
-                            st.rerun()
+                        link_id = int(sel_mb_link.split("-")[0].strip()) if sel_mb_link else 1
+                        new_u_id = max([x.get("id", 0) for x in users_list], default=0) + 1
+                        db.setdefault("utilisateurs", []).append({
+                            "id": new_u_id,
+                            "prenom": u_prenom.strip(),
+                            "nom": u_nom.strip(),
+                            "email": u_email.strip(),
+                            "mot_de_passe": hash_password(u_pwd),
+                            "role": u_role,
+                            "membre_id": link_id,
+                            "rondes_autorisees": new_rondes if new_rondes else [current_ronde["id"]]
+                        })
+                        save_data(db)
+                        st.session_state["p_user_adding"] = False
+                        st.session_state["flash_success"] = f"✅ Utilisateur {u_prenom} {u_nom} ({u_role}) enregistré !"
+                        st.rerun()
 
-        st.markdown("---")
-        st.markdown("##### 🗑️ Supprimer un compte utilisateur")
-        other_users = [u for u in users_list if u.get("id") != logged_user.get("id")]
-        if other_users:
-            u_del_opts = [f"{u['id']} - {u['prenom']} {u['nom']} ({u.get('role', '').upper()})" for u in other_users]
-            sel_del_u = st.selectbox("Choisir le compte à supprimer :", u_del_opts, key="sel_del_user")
-            if st.button("🗑️ Supprimer définitivement ce compte", type="secondary"):
-                del_id = int(sel_del_u.split("-")[0].strip())
-                db["utilisateurs"] = [x for x in db["utilisateurs"] if x.get("id") != del_id]
-                save_data(db)
-                st.session_state["flash_success"] = "🗑️ Compte utilisateur supprimé avec succès."
-                st.rerun()
+        # ÉCRAN 3 : AFFICHAGE DU TABLEAU AVEC ACTIONS SUR CHAQUE LIGNE ET BOUTON D'AJOUT À LA SUITE
         else:
-            st.caption("Aucun autre compte utilisateur à supprimer.")
+            if users_list:
+                st.markdown("""
+                    <div style="background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px 8px 0 0; padding:10px 12px; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:4px;">
+                        <div style="display:flex; align-items:center;">
+                            <div style="width:7%;"># ID</div>
+                            <div style="width:23%;">Identité</div>
+                            <div style="width:25%;">E-mail (Identifiant)</div>
+                            <div style="width:17%;">Rôle</div>
+                            <div style="width:14%;">Membre rattaché</div>
+                            <div style="width:14%; text-align:right;">Actions</div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                role_badges = {
+                    "admin": ('<span style="background:#FEF3C7; color:#92400E; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">👑 Admin</span>'),
+                    "responsable": ('<span style="background:#DCFCE7; color:#166534; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">🏕️ Responsable</span>'),
+                    "parent": ('<span style="background:#DBEAFE; color:#1E40AF; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">👨‍👩‍👧 Parent</span>')
+                }
+
+                for u in users_list:
+                    u_id = u.get("id")
+                    u_role = u.get("role", "parent").lower()
+                    badge_html = role_badges.get(u_role, f'<span style="background:#F3F4F6; color:#374151; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">{u_role.upper()}</span>')
+                    is_me = (u_id == logged_user.get("id"))
+                    mb_name = all_membres_map.get(u.get("membre_id"), "-")
+
+                    c_id, c_name, c_mail, c_role, c_mb, c_actions = st.columns([0.7, 2.3, 2.5, 1.7, 1.4, 1.4])
+                    with c_id:
+                        st.markdown(f"**#{u_id}**")
+                    with c_name:
+                        me_tag = ' <span style="background:#EEF2FF; color:#4338CA; font-size:10px; padding:1px 6px; border-radius:10px; font-weight:700;">(Vous)</span>' if is_me else ''
+                        st.markdown(f"**{u.get('prenom', '')} {u.get('nom', '')}**{me_tag}", unsafe_allow_html=True)
+                    with c_mail:
+                        st.markdown(f"✉️ `{u.get('email', '')}`")
+                    with c_role:
+                        st.markdown(badge_html, unsafe_allow_html=True)
+                    with c_mb:
+                        st.caption(f"👤 {mb_name}")
+                    with c_actions:
+                        cb1, cb2 = st.columns([2, 1])
+                        with cb1:
+                            if st.button("✏️ Modifier", key=f"btn_edit_u_line_{u_id}", use_container_width=True):
+                                st.session_state["p_user_editing_id"] = u_id
+                                st.session_state["p_user_adding"] = False
+                                st.rerun()
+                        with cb2:
+                            if not is_me:
+                                if st.button("🗑️", key=f"btn_del_u_line_{u_id}", use_container_width=True, help="Supprimer cet utilisateur"):
+                                    db["utilisateurs"] = [x for x in db["utilisateurs"] if x.get("id") != u_id]
+                                    save_data(db)
+                                    st.session_state["flash_success"] = f"🗑️ Utilisateur {u.get('prenom')} {u.get('nom')} supprimé."
+                                    st.rerun()
+                            else:
+                                st.caption("—")
+                    st.markdown('<hr style="margin:4px 0 8px 0; border:0; border-top:1px solid #E2E8F0;">', unsafe_allow_html=True)
+            else:
+                st.info("Aucun utilisateur enregistré.")
+
+            st.write("")
+            if st.button("➕ Ajouter un utilisateur à la suite du tableau", type="primary", use_container_width=True, key="btn_trigger_add_user"):
+                st.session_state["p_user_adding"] = True
+                st.session_state["p_user_editing_id"] = None
+                st.rerun()
 
 
     # SYNCHRONISATION GOOGLE SHEETS
