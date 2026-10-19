@@ -106,11 +106,14 @@ def normalize_rencontre_data(r):
     r.setdefault("description", "")
     r.setdefault("imaginaire_rencontre", "")
     r.setdefault("objectifs", "")
+    r.setdefault("compte_rendu", "")
     r.setdefault("photo", "")
     r.setdefault("lieu_adresse", r.get("lieu", "Local Scout - Sartrouville"))
     r["lat"] = safe_float(r.get("lat"), 48.9417)
     r["lon"] = safe_float(r.get("lon"), 2.1645)
     r.setdefault("materiels", [])
+    for m_item in r.get("materiels", []):
+        m_item.setdefault("ok", False)
     r.setdefault("colonnes_deroule", [])
     
     clean_deroule = []
@@ -131,6 +134,145 @@ def normalize_rencontre_data(r):
     r["deroule"] = clean_deroule
     return r
 
+def get_ronde_adult_options(ronde):
+    """
+    Retourne la liste ordonnée des adultes (responsables et parents) de la ronde,
+    ainsi que les options collectives scout usuelles.
+    """
+    adults = []
+    seen = set()
+    for m in (ronde.get("membres", []) if ronde else []):
+        role = (m.get("role") or "").strip().lower()
+        if role in ["responsable", "parent", "animateur", "invité", "invite", "chef"] or (role and role != "enfant"):
+            p = (m.get("prenom") or "").strip()
+            n = (m.get("nom") or "").strip()
+            p_fmt = " ".join([w.capitalize() for w in p.split()])
+            n_fmt = n.upper()
+            full_name = f"{p_fmt} {n_fmt}".strip()
+            if full_name and full_name.upper() not in seen:
+                seen.add(full_name.upper())
+                adults.append(full_name)
+    adults.sort(key=lambda x: x.upper())
+    common = ["Toute l'équipe d'animation", "Parents volontaires", "Parents accompagnateurs", "Tous", "Parents"]
+    return adults, common
+
+def parse_animators_string(anim_str, adults, common):
+    """
+    Découpe une chaîne d'animateurs existante pour pré-sélectionner les membres
+    reconnus dans le multiselect, et placer le reste dans le champ 'autre personne'.
+    """
+    if not anim_str or not str(anim_str).strip():
+        return [], ""
+    
+    clean_str = str(anim_str).replace("(", " , ").replace(")", " , ")
+    raw_tokens = re.split(r'[,;/]|&|\bet\b', clean_str)
+    raw_tokens = [t.strip() for t in raw_tokens if t.strip()]
+    
+    all_options = adults + common
+    selected = []
+    unmatched = []
+    
+    for token in raw_tokens:
+        tok_clean = token.strip()
+        tok_lower = tok_clean.lower()
+        
+        if tok_lower in ["a", "autre", "autres", "+"]:
+            continue
+            
+        matched = False
+        for opt in all_options:
+            if tok_lower == opt.lower():
+                if opt not in selected:
+                    selected.append(opt)
+                matched = True
+                break
+                
+        if not matched:
+            for opt in adults:
+                parts = opt.split()
+                first = parts[0].lower() if len(parts) > 0 else ""
+                last = parts[-1].lower() if len(parts) > 1 else ""
+                if tok_lower == first or (len(tok_lower) >= 4 and first.startswith(tok_lower)):
+                    if opt not in selected:
+                        selected.append(opt)
+                    matched = True
+                    break
+                if tok_lower == last or opt.lower() in tok_lower:
+                    if opt not in selected:
+                        selected.append(opt)
+                    matched = True
+                    break
+                    
+        if not matched:
+            for c in common:
+                if c.lower() in tok_lower or tok_lower in c.lower():
+                    if c not in selected:
+                        selected.append(c)
+                    matched = True
+                    break
+                    
+        if not matched:
+            if tok_clean not in unmatched:
+                unmatched.append(tok_clean)
+                
+    other_str = ", ".join(unmatched)
+    return selected, other_str
+
+def combine_animators(selected_list, other_text):
+    """
+    Combine les animateurs sélectionnés dans le multiselect et le texte libre optionnel.
+    """
+    parts = [s.strip() for s in (selected_list or []) if s and s.strip()]
+    if other_text and str(other_text).strip():
+        oth = str(other_text).strip()
+        if oth not in parts:
+            parts.append(oth)
+    return ", ".join(parts)
+
+# Les 6 axes de développement officiels des Farfadets (SGDF)
+GRANDIR_OPTIONS = [
+    "🤝 Grandir avec les autres",
+    "🏃 Grandir avec son corps",
+    "🦉 Grandir avec sagesse",
+    "🎨 Grandir avec ses mains et sa tête",
+    "🕊️ Grandir avec Jésus",
+    "❤️ Grandir avec son cœur"
+]
+
+def sync_parent_child_links(ronde, member_id, new_linked_ids, is_child):
+    """
+    Synchronisation bidirectionnelle des liens de parenté dans la ronde.
+    Si is_child=True: member_id est un Enfant, new_linked_ids sont ses parents/responsables.
+    Si is_child=False: member_id est un Parent/Responsable, new_linked_ids sont ses enfants.
+    """
+    membres = ronde.get("membres", [])
+    current_m = next((m for m in membres if m.get("id") == member_id), None)
+    if not current_m:
+        return
+    new_set = set(new_linked_ids or [])
+    if is_child:
+        current_m["parents_ids"] = list(new_set)
+        for p in membres:
+            if p.get("role") in ["Parent", "Responsable"]:
+                p.setdefault("enfants_ids", [])
+                if p["id"] in new_set:
+                    if member_id not in p["enfants_ids"]:
+                        p["enfants_ids"].append(member_id)
+                else:
+                    if member_id in p["enfants_ids"]:
+                        p["enfants_ids"].remove(member_id)
+    else:
+        current_m["enfants_ids"] = list(new_set)
+        for c in membres:
+            if c.get("role") == "Enfant":
+                c.setdefault("parents_ids", [])
+                if c["id"] in new_set:
+                    if member_id not in c["parents_ids"]:
+                        c["parents_ids"].append(member_id)
+                else:
+                    if member_id in c["parents_ids"]:
+                        c["parents_ids"].remove(member_id)
+
 # =============================================================
 # CHARGEMENT ET SAUVEGARDE DE LA BASE DE DONNÉES
 # =============================================================
@@ -146,6 +288,10 @@ def load_data():
             for ro in raw.get("rondes", []):
                 ro.setdefault("imaginaire_photos", [])
                 ro.setdefault("imaginaire_titre", "L'Aventure des Farfadets")
+                ro.setdefault("progressions", [])
+                for mb in ro.get("membres", []):
+                    mb.setdefault("parents_ids", [])
+                    mb.setdefault("enfants_ids", [])
                 ro["rencontres"] = [normalize_rencontre_data(r) for r in ro.get("rencontres", [])]
             return raw
     except Exception:
@@ -168,7 +314,9 @@ def build_excel_export_bytes(database_obj, save_path=None):
                 rows_m.append({
                     "id": m.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
                     "prenom": m.get("prenom", ""), "nom": m.get("nom", ""),
-                    "role": m.get("role", "Enfant"), "contact": m.get("contact", ""), "photo": m.get("photo", "")
+                    "role": m.get("role", "Enfant"), "contact": m.get("contact", ""), "photo": m.get("photo", ""),
+                    "parents_ids": json.dumps(m.get("parents_ids", []), ensure_ascii=False),
+                    "enfants_ids": json.dumps(m.get("enfants_ids", []), ensure_ascii=False)
                 })
         pd.DataFrame(rows_m).to_excel(writer, sheet_name="Membres", index=False)
 
@@ -183,7 +331,7 @@ def build_excel_export_bytes(database_obj, save_path=None):
                     "lat": rc.get("lat", 48.9417), "lon": rc.get("lon", 2.1645),
                     "animateur": rc.get("animateur", ""), "statut": rc.get("statut", "À venir"),
                     "description": rc.get("description", ""), "imaginaire_rencontre": rc.get("imaginaire_rencontre", ""),
-                    "objectifs": rc.get("objectifs", ""), "photo": rc.get("photo", ""),
+                    "objectifs": rc.get("objectifs", ""), "compte_rendu": rc.get("compte_rendu", ""), "photo": rc.get("photo", ""),
                     "colonnes_deroule_json": json.dumps(rc.get("colonnes_deroule", []), ensure_ascii=False),
                     "deroule_json": json.dumps(rc.get("deroule", []), ensure_ascii=False),
                     "materiels_json": json.dumps(rc.get("materiels", []), ensure_ascii=False)
@@ -217,7 +365,7 @@ def build_excel_export_bytes(database_obj, save_path=None):
                     rows_mat.append({
                         "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "rencontre_id": rc.get("id"), "titre_rencontre": rc.get("titre", ""),
                         "materiel_id": m.get("id", ""), "nom": m.get("nom", ""), "qui_amene": m.get("qui_amene", ""),
-                        "quantite_remarque": m.get("remarque", m.get("quantite", "")), "photo": m.get("photo", "")
+                        "quantite_remarque": m.get("remarque", m.get("quantite", "")), "est_pret": "OUI" if m.get("ok") else "NON", "photo": m.get("photo", "")
                     })
         pd.DataFrame(rows_mat).to_excel(writer, sheet_name="Materiels", index=False)
 
@@ -251,7 +399,19 @@ def build_excel_export_bytes(database_obj, save_path=None):
             })
         pd.DataFrame(rows_u).to_excel(writer, sheet_name="Utilisateurs", index=False)
 
-        # 9. Configuration
+        # 9. Progressions (Les Grandir des Farfadets)
+        rows_prog = []
+        for r in database_obj.get("rondes", []):
+            for p in r.get("progressions", []):
+                rows_prog.append({
+                    "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
+                    "id": p.get("id"), "enfant_id": p.get("enfant_id"), "enfant_nom": p.get("enfant_nom", ""),
+                    "grandir": p.get("grandir", ""), "note_sur_10": p.get("note", 10),
+                    "date_reussite": p.get("date_reussite", ""), "commentaire": p.get("commentaire", "")
+                })
+        pd.DataFrame(rows_prog).to_excel(writer, sheet_name="Progressions", index=False)
+
+        # 10. Configuration
         rows_cfg = [
             {"cle": "active_ronde_id", "valeur": str(database_obj.get("active_ronde_id", 1))},
             {"cle": "google_sheet_url", "valeur": str(database_obj.get("google_sheet_url", ""))},
@@ -1302,6 +1462,10 @@ def dialog_modifier_rencontre(rencontre_id):
 
     # 1. INFORMATIONS GÉNÉRALES
     if cur_modal_tab == "📋 Informations Générales":
+        adult_opts, comm_opts = get_ronde_adult_options(current_ronde)
+        all_anim_opts = adult_opts + comm_opts
+        def_anim_sel, def_anim_oth = parse_animators_string(r.get("animateur", ""), adult_opts, comm_opts)
+
         with st.form(f"form_edit_r_gen_{rencontre_id}"):
             c1, c2 = st.columns(2)
             with c1:
@@ -1313,10 +1477,27 @@ def dialog_modifier_rencontre(rencontre_id):
                 d_date = st.date_input("Date de la rencontre (JJ/MM/AAAA)", value=d_val, format="DD/MM/YYYY")
             with c2:
                 horaire = st.text_input("Créneau horaire", value=r.get("horaire", "14:00 - 17:00"))
-                animateur = st.text_input("Animateur principal", value=r.get("animateur", ""))
                 statut_opts = ["À venir", "Terminé", "Annulé"]
                 statut_idx = statut_opts.index(r.get("statut", "À venir")) if r.get("statut") in statut_opts else 0
                 statut = st.selectbox("Statut", statut_opts, index=statut_idx)
+
+            st.markdown("---")
+            st.markdown("##### 👥 Animateurs de la rencontre")
+            c_anim1, c_anim2 = st.columns([1.6, 1])
+            with c_anim1:
+                sel_anim = st.multiselect(
+                    "Animateurs référents (Parents / Responsables) :",
+                    options=all_anim_opts,
+                    default=def_anim_sel,
+                    help="Choisissez un ou plusieurs parents ou responsables de la ronde pour animer la rencontre."
+                )
+            with c_anim2:
+                autre_anim = st.text_input(
+                    "Autre personne (si non listée) :",
+                    value=def_anim_oth,
+                    placeholder="Ex : Christophe (Compagnon), Grand-parent...",
+                    help="Précisez ici toute personne extérieure, intervenant ou bénévole non listé."
+                )
 
             st.markdown("---")
             st.markdown("#### 📍 Lieu & Coordonnées GPS pour la Carte")
@@ -1333,7 +1514,7 @@ def dialog_modifier_rencontre(rencontre_id):
                 r["type"] = type_r
                 r["date"] = parse_date_to_iso(d_date)
                 r["horaire"] = horaire
-                r["animateur"] = animateur
+                r["animateur"] = combine_animators(sel_anim, autre_anim)
                 r["statut"] = statut
                 r["lieu"] = lieu
                 r["lieu_adresse"] = lieu_adr
@@ -1351,6 +1532,8 @@ def dialog_modifier_rencontre(rencontre_id):
         deroule_list = r.get("deroule", [])
         custom_cols = r.setdefault("colonnes_deroule", [])
         mat_noms = [m.get("nom") for m in r.get("materiels", []) if m.get("nom")]
+        adult_opts, comm_opts = get_ronde_adult_options(current_ronde)
+        all_anim_opts = adult_opts + comm_opts
 
         cur_edit_step_key = f"editing_step_idx_{rencontre_id}"
         cur_add_step_key = f"adding_step_{rencontre_id}"
@@ -1369,21 +1552,38 @@ def dialog_modifier_rencontre(rencontre_id):
             with c_title:
                 st.markdown(f"##### ✏️ Modifier l'étape {editing_idx + 1} : **{cur_s.get('activite', '')}**")
             
+            m_s_def_sel, m_s_def_oth = parse_animators_string(cur_s.get("animateur", ""), adult_opts, comm_opts)
             with st.form(f"form_modify_step_{rencontre_id}_{editing_idx}"):
-                col_ms1, col_ms2, col_ms3 = st.columns(3)
+                col_ms1, col_ms2 = st.columns(2)
                 with col_ms1:
                     m_s_date = st.date_input("Date de l'étape", value=parse_date_obj(cur_s.get("date", r.get("date", date.today()))), format="DD/MM/YYYY")
                     m_s_act = st.text_input("Activité *", value=cur_s.get("activite", ""))
+                    c_time1, c_time2 = st.columns(2)
+                    with c_time1:
+                        m_s_deb = st.text_input("Heure début", value=cur_s.get("heure_debut", "14:00"))
+                    with c_time2:
+                        m_s_fin = st.text_input("Heure fin", value=cur_s.get("heure_fin", "14:30"))
                 with col_ms2:
-                    m_s_deb = st.text_input("Heure début", value=cur_s.get("heure_debut", "14:00"))
-                    m_s_fin = st.text_input("Heure fin", value=cur_s.get("heure_fin", "14:30"))
-                with col_ms3:
-                    m_s_anim = st.text_input("Animateur", value=cur_s.get("animateur", ""))
                     current_step_mats = cur_s.get("materiels", [])
                     avail_mats = list(set(mat_noms + current_step_mats))
                     m_s_mats = st.multiselect("Matériels", options=avail_mats, default=[x for x in current_step_mats if x in avail_mats])
+                    m_s_com = st.text_input("Commentaire / Consigne", value=cur_s.get("commentaire", ""))
 
-                m_s_com = st.text_input("Commentaire / Consigne", value=cur_s.get("commentaire", ""))
+                c_ms_a1, c_ms_a2 = st.columns([1.6, 1])
+                with c_ms_a1:
+                    m_s_sel_anim = st.multiselect(
+                        "Animateur(s) en charge (parents / responsables) :",
+                        options=all_anim_opts,
+                        default=m_s_def_sel,
+                        key=f"ms_anim_sel_{rencontre_id}_{editing_idx}"
+                    )
+                with c_ms_a2:
+                    m_s_oth_anim = st.text_input(
+                        "Autre personne (si non listée) :",
+                        value=m_s_def_oth,
+                        key=f"ms_anim_oth_{rencontre_id}_{editing_idx}",
+                        placeholder="Ex : Christophe"
+                    )
 
                 m_custom_vals = {}
                 if custom_cols:
@@ -1411,7 +1611,7 @@ def dialog_modifier_rencontre(rencontre_id):
                         cur_s["activite"] = m_s_act
                         cur_s["heure_debut"] = m_s_deb
                         cur_s["heure_fin"] = m_s_fin
-                        cur_s["animateur"] = m_s_anim
+                        cur_s["animateur"] = combine_animators(m_s_sel_anim, m_s_oth_anim)
                         cur_s["materiels"] = m_s_mats
                         cur_s["commentaire"] = m_s_com
                         for cname, cval in m_custom_vals.items():
@@ -1443,19 +1643,36 @@ def dialog_modifier_rencontre(rencontre_id):
             with c_title:
                 st.markdown(f"##### ➕ Ajouter une nouvelle étape à la suite du tableau")
 
+            add_s_def_sel, add_s_def_oth = parse_animators_string(r.get("animateur", ""), adult_opts, comm_opts)
             with st.form(f"form_add_step_{rencontre_id}", clear_on_submit=True):
-                col_s1, col_s2, col_s3 = st.columns(3)
+                col_s1, col_s2 = st.columns(2)
                 with col_s1:
                     step_date = st.date_input("Date de l'étape", value=parse_date_obj(r.get("date", date.today())), format="DD/MM/YYYY")
                     step_act = st.text_input("Nom de l'activité *", placeholder="Ex : Grand jeu de piste")
+                    c_sth1, c_sth2 = st.columns(2)
+                    with c_sth1:
+                        step_h_deb = st.text_input("Heure début *", value="14:00")
+                    with c_sth2:
+                        step_h_fin = st.text_input("Heure fin *", value="14:30")
                 with col_s2:
-                    step_h_deb = st.text_input("Heure début *", value="14:00")
-                    step_h_fin = st.text_input("Heure fin *", value="14:30")
-                with col_s3:
-                    step_anim = st.text_input("Animateur en charge", value=r.get("animateur", ""))
                     step_mats = st.multiselect("Matériels nécessaires", options=mat_noms if mat_noms else ["Foulards", "Goûter", "Boussoles"])
-                
-                step_com = st.text_input("Commentaire / Consigne d'animation", placeholder="Ex : Diviser la ronde en deux équipes")
+                    step_com = st.text_input("Commentaire / Consigne d'animation", placeholder="Ex : Diviser la ronde en deux équipes")
+
+                c_as_a1, c_as_a2 = st.columns([1.6, 1])
+                with c_as_a1:
+                    step_sel_anim = st.multiselect(
+                        "Animateur(s) en charge (parents / responsables) :",
+                        options=all_anim_opts,
+                        default=add_s_def_sel,
+                        key=f"as_anim_sel_{rencontre_id}"
+                    )
+                with c_as_a2:
+                    step_oth_anim = st.text_input(
+                        "Autre personne (si non listée) :",
+                        value=add_s_def_oth,
+                        key=f"as_anim_oth_{rencontre_id}",
+                        placeholder="Ex : Christophe"
+                    )
 
                 new_custom_vals = {}
                 if custom_cols:
@@ -1484,7 +1701,7 @@ def dialog_modifier_rencontre(rencontre_id):
                             "heure_debut": step_h_deb,
                             "heure_fin": step_h_fin,
                             "activite": step_act,
-                            "animateur": step_anim,
+                            "animateur": combine_animators(step_sel_anim, step_oth_anim),
                             "materiels": step_mats,
                             "commentaire": step_com
                         }
@@ -1598,6 +1815,26 @@ def dialog_modifier_rencontre(rencontre_id):
                 st.session_state[cur_edit_step_key] = None
                 st.rerun()
 
+            # ZONE NOTES / COMPTE-RENDU DE LA RENCONTRE (Retour d'expérience après la séance)
+            st.write("")
+            st.markdown("---")
+            st.markdown("##### 📝 Notes & Compte-Rendu après la rencontre")
+            st.caption("Espace réservé aux animateurs pour faire le bilan de la séance et transmettre les informations utiles aux prochains animateurs (ce qui a marché, points de vigilance, ressentis).")
+            with st.form(f"form_compte_rendu_{rencontre_id}"):
+                cr_input = st.text_area(
+                    "Compte-rendu, retours d'animation et points d'attention :",
+                    value=r.get("compte_rendu", ""),
+                    height=130,
+                    placeholder="Ex : Superbe séance ! Le jeu de piste a pris 15 minutes de plus que prévu. Les enfants ont adoré le temps imaginaire. Bien penser à prévoir plus de cordes pour la prochaine fois..."
+                )
+                if st.form_submit_button("💾 Enregistrer les notes / compte-rendu", type="primary", use_container_width=True):
+                    r["compte_rendu"] = cr_input
+                    save_data(db)
+                    st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                    st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                    st.session_state["flash_success"] = "✅ Notes & Compte-rendu de la rencontre enregistrés !"
+                    st.rerun()
+
     # 3. LISTE DU MATÉRIEL (TABLEAU INTERACTIF AVEC ÉCRAN MODIFIER ET ÉCRAN AJOUTER)
     elif cur_modal_tab == "🎒 Liste du Matériel & Photos":
         st.markdown("#### 🎒 Matériels de la rencontre")
@@ -1627,6 +1864,7 @@ def dialog_modifier_rencontre(rencontre_id):
                     edit_m_nom = st.text_input("Nom du matériel *", value=m.get("nom", ""))
                     q_idx = qui_options.index(m.get("qui_amene")) if m.get("qui_amene") in qui_options else 0
                     edit_m_qui = st.selectbox("Qui l'amène ?", options=qui_options, index=q_idx)
+                    edit_m_ok = st.checkbox("✅ Matériel prêt / En possession (OK)", value=bool(m.get("ok", False)))
                 with em2:
                     edit_m_rem = st.text_input("Quantité / Précision", value=m.get("remarque", m.get("quantite", "")))
                     edit_m_file = st.file_uploader("Photo du matériel", type=["png", "jpg", "jpeg"], key=f"f_mat_up_{rencontre_id}_{editing_m_idx}")
@@ -1650,6 +1888,7 @@ def dialog_modifier_rencontre(rencontre_id):
                         m["qui_amene"] = edit_m_qui
                         m["remarque"] = edit_m_rem
                         m["quantite"] = edit_m_rem
+                        m["ok"] = edit_m_ok
                         if edit_m_file is not None:
                             m["photo"] = file_to_base64(edit_m_file)
                         elif edit_m_url:
@@ -1686,6 +1925,7 @@ def dialog_modifier_rencontre(rencontre_id):
                 with col_add_m1:
                     m_nom = st.text_input("Nom du matériel *", placeholder="Ex : 10 boussoles et 5 balises")
                     m_qui = st.selectbox("Qui l'amène ?", options=qui_options)
+                    m_ok = st.checkbox("✅ Matériel déjà prêt / En possession (OK)", value=False)
                 with col_add_m2:
                     m_rem = st.text_input("Quantité / Remarque", placeholder="Ex : 1 par sizaine")
                     m_file = st.file_uploader("Photo du matériel (optionnel)", type=["png", "jpg", "jpeg"])
@@ -1712,6 +1952,7 @@ def dialog_modifier_rencontre(rencontre_id):
                             "qui_amene": m_qui,
                             "remarque": m_rem,
                             "quantite": m_rem,
+                            "ok": m_ok,
                             "photo": photo_val
                         })
                         save_data(db)
@@ -1727,11 +1968,12 @@ def dialog_modifier_rencontre(rencontre_id):
                 st.markdown("""
                     <div style="background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px 8px 0 0; padding:10px 12px; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:4px;">
                         <div style="display:flex; align-items:center;">
-                            <div style="width:10%;">Photo</div>
-                            <div style="width:32%;">Nom du matériel</div>
-                            <div style="width:22%;">Qui l'amène ?</div>
-                            <div style="width:20%;">Quantité / Remarque</div>
-                            <div style="width:16%; text-align:right;">Actions</div>
+                            <div style="width:8%;">Photo</div>
+                            <div style="width:30%;">Nom du matériel</div>
+                            <div style="width:20%;">Qui l'amène ?</div>
+                            <div style="width:18%;">Quantité / Remarque</div>
+                            <div style="width:10%; text-align:center;">Prêt (OK)</div>
+                            <div style="width:14%; text-align:right;">Actions</div>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -1739,7 +1981,7 @@ def dialog_modifier_rencontre(rencontre_id):
                 for m_idx, m in enumerate(mats_list):
                     c_row = st.container()
                     with c_row:
-                        c_ph, c_name, c_qui, c_rem, c_act = st.columns([1, 3.2, 2.2, 2, 1.6])
+                        c_ph, c_name, c_qui, c_rem, c_ok, c_act = st.columns([0.8, 3.0, 2.0, 1.8, 1.0, 1.4])
                         with c_ph:
                             if m.get("photo"):
                                 st.markdown(f'<img src="{m["photo"]}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #CBD5E1;">', unsafe_allow_html=True)
@@ -1752,6 +1994,13 @@ def dialog_modifier_rencontre(rencontre_id):
                         with c_rem:
                             rem_text = m.get("remarque") or m.get("quantite") or "-"
                             st.caption(rem_text)
+                        with c_ok:
+                            cur_ok = bool(m.get("ok", False))
+                            new_ok = st.checkbox("OK", value=cur_ok, key=f"chk_mat_ok_{rencontre_id}_{m_idx}_{m.get('id', m_idx)}")
+                            if new_ok != cur_ok:
+                                m["ok"] = new_ok
+                                save_data(db)
+                                st.rerun()
                         with c_act:
                             cb1, cb2 = st.columns([2, 1])
                             with cb1:
@@ -1840,19 +2089,54 @@ def dialog_modifier_membre(membre_id):
         st.error("Membre introuvable.")
         return
     with st.form(f"form_edit_m_{membre_id}"):
-        prenom = st.text_input("Prénom", value=m.get("prenom", ""))
-        nom = st.text_input("Nom", value=m.get("nom", ""))
-        roles = ["Enfant", "Parent", "Responsable", "Invité"]
-        idx_r = roles.index(m.get("role", "Enfant")) if m.get("role") in roles else 0
-        role = st.selectbox("Rôle", roles, index=idx_r)
-        contact = st.text_input("Contact", value=m.get("contact", ""))
-        initiales = st.text_input("Initiales avatar (2 lettres)", value=m.get("photo", f"{prenom[:1]}{nom[:1]}".upper()), max_chars=3)
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            prenom = st.text_input("Prénom *", value=m.get("prenom", ""))
+            nom = st.text_input("Nom *", value=m.get("nom", ""))
+            roles = ["Enfant", "Parent", "Responsable", "Invité"]
+            idx_r = roles.index(m.get("role", "Enfant")) if m.get("role") in roles else 0
+            role = st.selectbox("Rôle", roles, index=idx_r)
+        with col_m2:
+            contact = st.text_input("Contact (tél ou e-mail)", value=m.get("contact", ""))
+            initiales = st.text_input("Initiales avatar (2 lettres)", value=m.get("photo", f"{prenom[:1]}{nom[:1]}".upper()), max_chars=3)
+
+        # LIEN FAMILIAL : Enfant <-> Parents
+        st.markdown("---")
+        st.markdown("##### 👨‍👩‍👧 Liens familiaux (Parents & Farfadets)")
+        all_adults = [x for x in current_ronde.get("membres", []) if x.get("role") in ["Parent", "Responsable"] and x["id"] != membre_id]
+        all_children = [x for x in current_ronde.get("membres", []) if x.get("role") == "Enfant" and x["id"] != membre_id]
+
+        if role == "Enfant":
+            cur_p_ids = [pid for pid in m.get("parents_ids", []) if any(a["id"] == pid for a in all_adults)]
+            sel_parents = st.multiselect(
+                "Parent(s) / Référent(s) de cet enfant :",
+                options=[a["id"] for a in all_adults],
+                default=cur_p_ids,
+                format_func=lambda pid: next((f"{a['prenom']} {a['nom']} ({a.get('role')})" for a in all_adults if a["id"] == pid), f"#{pid}"),
+                help="Sélectionnez le ou les parents de cet enfant inscrits dans la ronde."
+            )
+            sel_children = []
+        else:
+            cur_c_ids = [cid for cid in m.get("enfants_ids", []) if any(c["id"] == cid for c in all_children)]
+            sel_children = st.multiselect(
+                "Enfant(s) Farfadet(s) rattaché(s) à ce parent / responsable :",
+                options=[c["id"] for c in all_children],
+                default=cur_c_ids,
+                format_func=lambda cid: next((f"{c['prenom']} {c['nom']}" for c in all_children if c["id"] == cid), f"#{cid}"),
+                help="Sélectionnez le ou les enfants de ce parent inscrits dans la ronde."
+            )
+            sel_parents = []
+
         if st.form_submit_button("Sauvegarder", type="primary", use_container_width=True):
             m["prenom"] = prenom
             m["nom"] = nom
             m["role"] = role
             m["contact"] = contact
             m["photo"] = initiales
+            if role == "Enfant":
+                sync_parent_child_links(current_ronde, membre_id, sel_parents, is_child=True)
+            else:
+                sync_parent_child_links(current_ronde, membre_id, sel_children, is_child=False)
             save_data(db)
             st.session_state["flash_success"] = f"✅ Membre {prenom} {nom} mis à jour !"
             st.rerun()
@@ -1867,6 +2151,11 @@ def dialog_supprimer_membre(membre_id):
     c1, c2 = st.columns(2)
     with c1:
         if st.button("Confirmer", type="primary", use_container_width=True):
+            for mb in current_ronde.get("membres", []):
+                if membre_id in mb.get("parents_ids", []):
+                    mb["parents_ids"].remove(membre_id)
+                if membre_id in mb.get("enfants_ids", []):
+                    mb["enfants_ids"].remove(membre_id)
             current_ronde["membres"] = [x for x in current_ronde["membres"] if x["id"] != membre_id]
             save_data(db)
             st.session_state["flash_success"] = "🗑️ Membre supprimé."
@@ -1886,22 +2175,49 @@ def dialog_inscrire_membre():
             p_role = st.selectbox("Rôle", ["Enfant", "Parent", "Responsable", "Invité"])
             p_contact = st.text_input("Contact (tél ou email)")
 
+        st.markdown("---")
+        st.markdown("##### 👨‍👩‍👧 Liens familiaux (Optionnel)")
+        all_adults = [x for x in current_ronde.get("membres", []) if x.get("role") in ["Parent", "Responsable"]]
+        all_children = [x for x in current_ronde.get("membres", []) if x.get("role") == "Enfant"]
+
+        if p_role == "Enfant":
+            sel_p = st.multiselect(
+                "Parent(s) / Référent(s) rattaché(s) :",
+                options=[a["id"] for a in all_adults],
+                format_func=lambda pid: next((f"{a['prenom']} {a['nom']} ({a.get('role')})" for a in all_adults if a["id"] == pid), f"#{pid}")
+            )
+            sel_c = []
+        else:
+            sel_c = st.multiselect(
+                "Enfant(s) Farfadet(s) rattaché(s) :",
+                options=[c["id"] for c in all_children],
+                format_func=lambda cid: next((f"{c['prenom']} {c['nom']}" for c in all_children if c["id"] == cid), f"#{cid}")
+            )
+            sel_p = []
+
         if st.form_submit_button("Ajouter à la ronde", type="primary", use_container_width=True):
             if p_prenom and p_nom:
                 new_m_id = max([x["id"] for x in current_ronde.get("membres", [])], default=0) + 1
-                current_ronde.setdefault("membres", []).append({
+                new_member = {
                     "id": new_m_id,
                     "prenom": p_prenom,
                     "nom": p_nom,
                     "role": p_role,
                     "contact": p_contact,
-                    "photo": f"{p_prenom[:1]}{p_nom[:1]}".upper()
-                })
+                    "photo": f"{p_prenom[:1]}{p_nom[:1]}".upper(),
+                    "parents_ids": [],
+                    "enfants_ids": []
+                }
+                current_ronde.setdefault("membres", []).append(new_member)
+                if p_role == "Enfant" and sel_p:
+                    sync_parent_child_links(current_ronde, new_m_id, sel_p, is_child=True)
+                elif p_role in ["Parent", "Responsable"] and sel_c:
+                    sync_parent_child_links(current_ronde, new_m_id, sel_c, is_child=False)
                 save_data(db)
                 st.session_state["flash_success"] = f"✅ Membre {p_prenom} {p_nom} ajouté avec succès !"
                 st.rerun()
             else:
-                st.error("Le prénom et le nom sont obligatoires.")
+                st.error("Le prénom et le nom sont requis.")
 
 # ----------------- MODALES DOCUMENTS -----------------
 @st.dialog("✏️ Modifier le document / support")
@@ -2105,13 +2421,13 @@ if st.session_state["nav_page"] == "🏠 Accueil":
             p_lieu = current_ronde.get("lieu_habituel", "Local Scout")
             st.markdown(render_map_card_html(p_lieu, "Notre Dame du Val, Sartrouville", 48.9417, 2.1645), unsafe_allow_html=True)
 
-        # 3. Vos Animateurs (responsables de ronde)
+        # 3. Vos Responsables (responsables de ronde)
         st.markdown("""
             <div class="speakers-header" style="margin-top:2px;">
                 <div class="card-icon-bubble" style="background:#1D4ED8;">👤</div>
                 <div>
-                    <div class="card-title" style="font-size:16px;">Vos animateurs</div>
-                    <div class="card-subtitle">Responsables de ronde & animateurs référents</div>
+                    <div class="card-title" style="font-size:16px;">Vos responsables</div>
+                    <div class="card-subtitle">Responsables de ronde</div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -2125,7 +2441,7 @@ if st.session_state["nav_page"] == "🏠 Accueil":
                         <div class="speaker-profile-box">
                             <div class="speaker-avatar-circle">{r_resp.get('photo', 'AN')}</div>
                             <div class="speaker-name">{r_resp.get('nom', '')}<br>{r_resp.get('prenom', '')}</div>
-                            <div class="speaker-role">Animateur Farfadet</div>
+                            <div class="speaker-role">Responsable</div>
                             <div style="font-size:11px; color:#1D4ED8; margin-top:3px;">{r_resp.get('contact', '')}</div>
                         </div>
                     """, unsafe_allow_html=True)
@@ -2220,7 +2536,7 @@ if st.session_state["nav_page"] == "🏠 Accueil":
 elif st.session_state["nav_page"] == "📅 Planning des rencontres":
     st.markdown("""
         <div class="hero-header-card" style="padding:22px 20px;">
-            <h1 class="hero-main-title" style="font-size:26px;">Planning & Calendrier des Rencontres</h1>
+            <h1 class="hero-main-title" style="font-size:26px;">Planning des Rencontres</h1>
             <div class="hero-sub-title" style="font-size:16px; color:#475569;">Consultez les dates, le déroulé visuel et les listes de matériel</div>
         </div>
     """, unsafe_allow_html=True)
@@ -2374,12 +2690,30 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                             st.markdown("##### 🎒 Matériels assignés :")
                             df_mats = pd.DataFrame([
                                 {
+                                    "Prêt (OK) ?": "✅ Prêt" if m.get("ok") else "⏳ À prévoir",
                                     "Matériel": m.get("nom", ""),
                                     "Qui amène": m.get("qui_amene", ""),
                                     "Précision / Quantité": m.get("remarque", m.get("quantite", ""))
                                 } for m in r["materiels"]
                             ])
                             st.dataframe(df_mats, use_container_width=True, hide_index=True)
+
+                        # Notes et Compte-rendu après la rencontre
+                        st.markdown("##### 📝 Notes & Compte-Rendu après la séance :")
+                        if r.get("compte_rendu"):
+                            st.info(f"**Bilan d'animation :**\n\n{r['compte_rendu']}")
+                        else:
+                            st.caption("Aucun compte-rendu rédigé pour le moment.")
+
+                        if is_responsable_or_admin():
+                            with st.expander("✏️ Rédiger ou modifier les notes / compte-rendu de cette séance"):
+                                with st.form(f"form_quick_cr_{r['id']}"):
+                                    quick_cr = st.text_area("Notes & Bilan de la séance :", value=r.get("compte_rendu", ""), height=100)
+                                    if st.form_submit_button("💾 Enregistrer le compte-rendu", type="primary"):
+                                        r["compte_rendu"] = quick_cr
+                                        save_data(db)
+                                        st.session_state["flash_success"] = f"✅ Compte-rendu de la séance du {format_date_fr(r['date'])} enregistré !"
+                                        st.rerun()
                         st.write("")
         else:
             st.info("Aucune rencontre enregistrée.")
@@ -2387,6 +2721,9 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
     elif cur_plan_view == "➕ Programmer une rencontre":
         if is_responsable_or_admin():
             st.subheader("Programmer une nouvelle rencontre")
+            adult_opts_n, comm_opts_n = get_ronde_adult_options(current_ronde)
+            all_anim_opts_n = adult_opts_n + comm_opts_n
+
             with st.form("form_add_rencontre", clear_on_submit=True):
                 f_col1, f_col2 = st.columns(2)
                 with f_col1:
@@ -2396,7 +2733,23 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                 with f_col2:
                     horaire_n = st.text_input("Créneau horaire", value="14:00 - 17:00")
                     lieu_n = st.text_input("Lieu", value=current_ronde.get("lieu_habituel", "Local Scout"))
-                    animateur_n = st.text_input("Animateur principal", placeholder="Ex : Julien DUBOIS")
+
+                st.markdown("---")
+                st.markdown("##### 👥 Animateurs de la rencontre (Parents & Responsables)")
+                c_fan1, c_fan2 = st.columns([1.6, 1])
+                with c_fan1:
+                    sel_anim_n = st.multiselect(
+                        "Animateurs référents (Parents / Responsables) :",
+                        options=all_anim_opts_n,
+                        default=[],
+                        help="Choisissez les parents ou responsables de la ronde pour animer la rencontre."
+                    )
+                with c_fan2:
+                    autre_anim_n = st.text_input(
+                        "Autre personne (si non listée) :",
+                        placeholder="Ex : Christophe (Compagnon), Grand-parent...",
+                        help="Précisez ici toute personne extérieure, intervenant ou bénévole non listé."
+                    )
 
                 st.markdown("---")
                 st.markdown("##### Description & Pédagogie de la séance")
@@ -2408,6 +2761,7 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                     if not titre_n:
                         st.error("Le titre de la rencontre est obligatoire.")
                     else:
+                        animateur_n = combine_animators(sel_anim_n, autre_anim_n)
                         new_r_id = max([x["id"] for x in current_ronde.get("rencontres", [])], default=0) + 1
                         date_iso = parse_date_to_iso(date_n)
                         new_item = {
@@ -2451,35 +2805,63 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
 elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
     st.markdown("""
         <div class="hero-header-card" style="padding:22px 20px;">
-            <h1 class="hero-main-title" style="font-size:26px;">Farfadets, Parents & Animateurs</h1>
-            <div class="hero-sub-title" style="font-size:16px; color:#475569;">Annuaire, fiches membres et gestion des rôles</div>
+            <h1 class="hero-main-title" style="font-size:26px;">Farfadets, Parents & Responsables</h1>
+            <div class="hero-sub-title" style="font-size:16px; color:#475569;">Annuaire, liens familiaux et suivi de la progression des 6 Grandir</div>
         </div>
     """, unsafe_allow_html=True)
 
-    tab_annuaire, tab_add_m = st.tabs(["📋 Annuaire et modification des membres", "➕ Inscrire un membre"])
+    tab_annuaire, tab_progression, tab_add_m = st.tabs([
+        "📋 Annuaire & Liens Familles", 
+        "🌟 Progression des Farfadets (Les Grandir)", 
+        "➕ Inscrire un membre"
+    ])
 
+    membres_list = current_ronde.get("membres", [])
+    enfants_ronde = [m for m in membres_list if m.get("role") == "Enfant"]
+    parents_ronde = [m for m in membres_list if m.get("role") == "Parent"]
+    respos_ronde = [m for m in membres_list if m.get("role") == "Responsable"]
+
+    # 1. ANNUAIRE ET LIENS FAMILIAUX
     with tab_annuaire:
         c_m1, c_m2, c_m3 = st.columns(3)
         with c_m1:
-            st.metric("Total Farfadets (6-8 ans)", len([m for m in current_ronde.get("membres", []) if m.get("role") == "Enfant"]))
+            st.metric("Total Farfadets (6-8 ans)", len(enfants_ronde))
         with c_m2:
-            st.metric("Parents investis", len([m for m in current_ronde.get("membres", []) if m.get("role") == "Parent"]))
+            st.metric("Parents investis", len(parents_ronde))
         with c_m3:
-            st.metric("Responsables / Animateurs", len([m for m in current_ronde.get("membres", []) if m.get("role") == "Responsable"]))
+            st.metric("Responsables de ronde", len(respos_ronde))
 
         st.write("")
-        membres_list = current_ronde.get("membres", [])
         if membres_list:
             for m in membres_list:
                 with st.container():
+                    role_m = m.get('role', 'Enfant')
+                    if role_m == "Enfant":
+                        parents_objs = [p for p in membres_list if p.get("id") in m.get("parents_ids", [])]
+                        if parents_objs:
+                            fam_text = "👨‍👩‍👧 <b>Parents :</b> " + ", ".join([f"{p.get('prenom')} {p.get('nom')}" for p in parents_objs])
+                        else:
+                            fam_text = '<span style="color:#94A3B8; font-style:italic;">👨‍👩‍👧 Parents non renseignés</span>'
+                    elif role_m in ["Parent", "Responsable"]:
+                        enfants_objs = [c for c in membres_list if c.get("id") in m.get("enfants_ids", [])]
+                        if enfants_objs:
+                            fam_text = "🧒 <b>Enfant(s) Farfadet(s) :</b> " + ", ".join([f"{c.get('prenom')} {c.get('nom')}" for c in enfants_objs])
+                        else:
+                            fam_text = '<span style="color:#94A3B8; font-style:italic;">🧒 Aucun enfant rattaché</span>'
+                    else:
+                        fam_text = ""
+
                     st.markdown(f"""
                         <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; padding:12px 18px; margin-bottom:8px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                 <div>
                                     <span style="font-weight:700; font-size:15px; color:#1E293B;">{m.get('prenom')} {m.get('nom')}</span>
-                                    <span style="background:#DBEAFE; color:#1E40AF; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px; margin-left:8px;">{m.get('role')}</span>
+                                    <span style="background:#DBEAFE; color:#1E40AF; font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px; margin-left:8px;">{role_m}</span>
                                 </div>
                                 <div style="font-size:12.5px; color:#64748B;">{m.get('contact', '')}</div>
+                            </div>
+                            <div style="margin-top:6px; font-size:12.5px; color:#334155;">
+                                {fam_text}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
@@ -2501,33 +2883,199 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
             if st.button("➕ Inscrire un membre à la suite de la liste", type="primary", use_container_width=True, key="btn_add_member_from_list"):
                 dialog_inscrire_membre()
 
+    # 2. SUIVI DE LA PROGRESSION DES FARFADETS (LES GRANDIR)
+    with tab_progression:
+        st.subheader("🌟 Suivi Pédagogique de la Progression : Les 6 Grandir")
+        st.caption("Dans la branche Farfadets (6-8 ans), chaque enfant chemine à son rythme à travers six axes de développement fondamentaux appelés les « Grandir ». Vous pouvez ici enregistrer chaque étape réussie, la noter sur 10, fixer la date de validation et observer l'évolution de la ronde.")
+
+        prog_list = current_ronde.setdefault("progressions", [])
+
+        if not enfants_ronde:
+            st.warning("Aucun enfant Farfadet n'est encore inscrit dans cette ronde pour enregistrer sa progression.")
+        else:
+            k1, k2, k3 = st.columns(3)
+            with k1:
+                st.metric("Farfadets dans la ronde", len(enfants_ronde))
+            with k2:
+                st.metric("Total des Grandir validés", len(prog_list))
+            with k3:
+                moy_note = round(sum(p.get("note", 0) for p in prog_list) / max(len(prog_list), 1), 1) if prog_list else 0.0
+                st.metric("Note moyenne de progression", f"{moy_note} / 10" if prog_list else "-")
+
+            st.markdown("---")
+            st.markdown("#### 👤 Fiche individuelle d'un Farfadet")
+            
+            enfant_names_map = {c["id"]: f"{c.get('prenom')} {c.get('nom')}" for c in enfants_ronde}
+            sel_enf_id = st.selectbox(
+                "Sélectionner un Farfadet :",
+                options=list(enfant_names_map.keys()),
+                format_func=lambda cid: enfant_names_map.get(cid, f"#{cid}")
+            )
+
+            # Progrès de l'enfant sélectionné
+            enf_progs = {p.get("grandir"): p for p in prog_list if p.get("enfant_id") == sel_enf_id}
+            
+            c_g_cols = st.columns(3)
+            for gi, g_name in enumerate(GRANDIR_OPTIONS):
+                with c_g_cols[gi % 3]:
+                    val = enf_progs.get(g_name)
+                    if val:
+                        note = val.get("note", 10)
+                        d_reussite = format_date_fr(val.get("date_reussite", ""))
+                        com = val.get("commentaire", "")
+                        stars = "⭐" * max(1, min(int(round(note / 2)), 5))
+                        st.markdown(f"""
+                            <div style="background:#F0FDF4; border:1px solid #86EFAC; border-radius:10px; padding:12px; margin-bottom:10px; min-height:130px;">
+                                <div style="font-weight:700; color:#166534; font-size:13.5px;">{g_name}</div>
+                                <div style="font-size:18px; font-weight:800; color:#15803D; margin-top:4px;">{note} / 10 <span style="font-size:13px;">{stars}</span></div>
+                                <div style="font-size:11.5px; color:#166534; margin-top:2px;">✅ Validé le <b>{d_reussite}</b></div>
+                                <div style="font-size:12px; color:#334155; margin-top:6px; font-style:italic;">{com if com else "Aucun commentaire"}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                            <div style="background:#F8FAFC; border:1px dashed #CBD5E1; border-radius:10px; padding:12px; margin-bottom:10px; min-height:130px;">
+                                <div style="font-weight:600; color:#64748B; font-size:13.5px;">{g_name}</div>
+                                <div style="font-size:13px; color:#94A3B8; margin-top:14px;">⏳ En cours d'apprentissage</div>
+                                <div style="font-size:11.5px; color:#94A3B8; margin-top:4px;">Non validé</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+            # FORMULAIRE POUR VALIDER OU METTRE À JOUR UN GRANDIR
+            if is_responsable_or_admin():
+                st.markdown("---")
+                with st.expander(f"➕ Noter ou valider un Grandir pour **{enfant_names_map.get(sel_enf_id)}**"):
+                    with st.form(f"form_note_grandir_{sel_enf_id}"):
+                        g_choix = st.selectbox("Grandir à valider / noter :", GRANDIR_OPTIONS)
+                        ex_val = enf_progs.get(g_choix, {})
+                        c_n1, c_n2 = st.columns(2)
+                        with c_n1:
+                            note_val = st.slider("Note de progression sur 10 :", min_value=1, max_value=10, value=int(ex_val.get("note", 8)))
+                        with c_n2:
+                            d_initial = parse_date_obj(ex_val.get("date_reussite", date.today()))
+                            date_reussite_val = st.date_input("Date de réussite / validation :", value=d_initial, format="DD/MM/YYYY")
+                        com_val = st.text_area("Observation pédagogique / Commentaires :", value=ex_val.get("commentaire", ""), placeholder="Ex : Très belle participation, a su aider son voisin lors du jeu...", height=70)
+
+                        if st.form_submit_button("💾 Enregistrer la progression du Farfadet", type="primary", use_container_width=True):
+                            existing = next((p for p in prog_list if p.get("enfant_id") == sel_enf_id and p.get("grandir") == g_choix), None)
+                            if existing:
+                                existing["note"] = note_val
+                                existing["date_reussite"] = parse_date_to_iso(date_reussite_val)
+                                existing["commentaire"] = com_val
+                            else:
+                                new_pid = max([p.get("id", 0) for p in prog_list], default=0) + 1
+                                prog_list.append({
+                                    "id": new_pid,
+                                    "enfant_id": sel_enf_id,
+                                    "enfant_nom": enfant_names_map.get(sel_enf_id),
+                                    "grandir": g_choix,
+                                    "note": note_val,
+                                    "date_reussite": parse_date_to_iso(date_reussite_val),
+                                    "commentaire": com_val
+                                })
+                            save_data(db)
+                            st.session_state["flash_success"] = f"✅ Progression '{g_choix}' enregistrée pour {enfant_names_map.get(sel_enf_id)} !"
+                            st.rerun()
+
+            # TABLEAU RÉCAPITULATIF DE TOUS LES FARFADETS
+            st.markdown("---")
+            st.markdown("#### 📊 Tableau Récapitulatif de la Ronde")
+            recap_rows = []
+            for c in enfants_ronde:
+                cid = c["id"]
+                c_p_map = {p.get("grandir"): p for p in prog_list if p.get("enfant_id") == cid}
+                notes_c = [p.get("note", 0) for p in c_p_map.values()]
+                row = {
+                    "Farfadet": f"{c.get('prenom')} {c.get('nom')}",
+                    "🤝 Autres": f"{c_p_map['🤝 Grandir avec les autres'].get('note')}/10" if '🤝 Grandir avec les autres' in c_p_map else "-",
+                    "🏃 Corps": f"{c_p_map['🏃 Grandir avec son corps'].get('note')}/10" if '🏃 Grandir avec son corps' in c_p_map else "-",
+                    "🦉 Sagesse": f"{c_p_map['🦉 Grandir avec sagesse'].get('note')}/10" if '🦉 Grandir avec sagesse' in c_p_map else "-",
+                    "🎨 Mains/Tête": f"{c_p_map['🎨 Grandir avec ses mains et sa tête'].get('note')}/10" if '🎨 Grandir avec ses mains et sa tête' in c_p_map else "-",
+                    "🕊️ Jésus": f"{c_p_map['🕊️ Grandir avec Jésus'].get('note')}/10" if '🕊️ Grandir avec Jésus' in c_p_map else "-",
+                    "❤️ Cœur": f"{c_p_map['❤️ Grandir avec son cœur'].get('note')}/10" if '❤️ Grandir avec son cœur' in c_p_map else "-",
+                    "Grandir validés": f"{len(c_p_map)} / 6",
+                    "Moyenne": f"{round(sum(notes_c) / len(notes_c), 1)}/10" if notes_c else "-"
+                }
+                recap_rows.append(row)
+            st.dataframe(pd.DataFrame(recap_rows), use_container_width=True, hide_index=True)
+
+            # JOURNAL DES ENREGISTREMENTS AVEC SUPPRESSION
+            if prog_list and is_responsable_or_admin():
+                with st.expander("📜 Journal détaillé des validations enregistrées"):
+                    for pi, pr in enumerate(prog_list):
+                        cp1, cp2, cp3, cp4 = st.columns([2.5, 3, 1.2, 1])
+                        with cp1:
+                            st.markdown(f"**{pr.get('enfant_nom')}**")
+                            st.caption(f"Validé le {format_date_fr(pr.get('date_reussite'))}")
+                        with cp2:
+                            st.markdown(f"{pr.get('grandir')}")
+                            if pr.get('commentaire'):
+                                st.caption(pr.get('commentaire'))
+                        with cp3:
+                            st.markdown(f'<span style="background:#DCFCE7; color:#166534; font-weight:700; padding:2px 8px; border-radius:10px;">⭐ {pr.get("note")}/10</span>', unsafe_allow_html=True)
+                        with cp4:
+                            if st.button("🗑️", key=f"del_prog_{pr.get('id', pi)}", help="Supprimer cette validation"):
+                                prog_list.pop(pi)
+                                save_data(db)
+                                st.session_state["flash_success"] = "🗑️ Validation supprimée."
+                                st.rerun()
+                        st.markdown('<hr style="margin:2px 0 6px 0; border:0; border-top:1px solid #E2E8F0;">', unsafe_allow_html=True)
+
+    # 3. INSCRIRE UN NOUVEAU MEMBRE
     with tab_add_m:
         if not is_responsable_or_admin():
             st.info("ℹ️ L'inscription d'un nouveau membre est réservée aux animateurs et administrateurs.")
         else:
-            st.subheader("Inscrire un nouveau membre")
-            with st.form("form_add_m", clear_on_submit=True):
+            st.subheader("Inscrire un nouveau membre dans la ronde")
+            with st.form("form_add_m_page", clear_on_submit=True):
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
                     p_prenom = st.text_input("Prénom *")
                     p_nom = st.text_input("Nom *")
                 with col_p2:
-                    p_role = st.selectbox("Rôle", ["Enfant", "Parent", "Responsable", "Invité"])
+                    p_role = st.selectbox("Rôle *", ["Enfant", "Parent", "Responsable", "Invité"])
                     p_contact = st.text_input("Contact (tél ou email)")
+
+                st.markdown("---")
+                st.markdown("##### 👨‍👩‍👧 Liens familiaux (Optionnel)")
+                all_adults_pg = [x for x in current_ronde.get("membres", []) if x.get("role") in ["Parent", "Responsable"]]
+                all_children_pg = [x for x in current_ronde.get("membres", []) if x.get("role") == "Enfant"]
+
+                if p_role == "Enfant":
+                    sel_p_pg = st.multiselect(
+                        "Parent(s) / Référent(s) rattaché(s) :",
+                        options=[a["id"] for a in all_adults_pg],
+                        format_func=lambda pid: next((f"{a['prenom']} {a['nom']} ({a.get('role')})" for a in all_adults_pg if a["id"] == pid), f"#{pid}")
+                    )
+                    sel_c_pg = []
+                else:
+                    sel_c_pg = st.multiselect(
+                        "Enfant(s) Farfadet(s) rattaché(s) :",
+                        options=[c["id"] for c in all_children_pg],
+                        format_func=lambda cid: next((f"{c['prenom']} {c['nom']}" for c in all_children_pg if c["id"] == cid), f"#{cid}")
+                    )
+                    sel_p_pg = []
 
                 if st.form_submit_button("Ajouter à la ronde", type="primary", use_container_width=True):
                     if p_prenom and p_nom:
                         new_m_id = max([x["id"] for x in current_ronde.get("membres", [])], default=0) + 1
-                        current_ronde.setdefault("membres", []).append({
+                        new_member = {
                             "id": new_m_id,
                             "prenom": p_prenom,
                             "nom": p_nom,
                             "role": p_role,
                             "contact": p_contact,
-                            "photo": f"{p_prenom[:1]}{p_nom[:1]}".upper()
-                        })
+                            "photo": f"{p_prenom[:1]}{p_nom[:1]}".upper(),
+                            "parents_ids": [],
+                            "enfants_ids": []
+                        }
+                        current_ronde.setdefault("membres", []).append(new_member)
+                        if p_role == "Enfant" and sel_p_pg:
+                            sync_parent_child_links(current_ronde, new_m_id, sel_p_pg, is_child=True)
+                        elif p_role in ["Parent", "Responsable"] and sel_c_pg:
+                            sync_parent_child_links(current_ronde, new_m_id, sel_c_pg, is_child=False)
                         save_data(db)
-                        st.session_state["flash_success"] = f"✅ {p_prenom} {p_nom} a été ajouté(e) avec succès !"
+                        st.session_state["flash_success"] = f"✅ Membre {p_prenom} {p_nom} ({p_role}) ajouté avec succès !"
                         st.rerun()
                     else:
                         st.error("Le prénom et le nom sont requis.")
@@ -2707,18 +3255,41 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
 
     st.markdown("""
         <div class="hero-header-card" style="padding:22px 20px;">
-            <h1 class="hero-main-title" style="font-size:26px;">Paramètres, Droits & Gestion Multi-Rondes</h1>
+            <h1 class="hero-main-title" style="font-size:26px;">Paramètres de la ronde</h1>
             <div class="hero-sub-title" style="font-size:16px; color:#475569;">Espace réservé à l'administrateur</div>
         </div>
     """, unsafe_allow_html=True)
 
-    tab_p_ronde, tab_p_users, tab_p_sync = st.tabs([
+    PARAMETRES_TABS = [
         "🏕️ Informations de la Ronde", 
         "👥 Gestion des Utilisateurs & Rôles", 
         "☁️ Synchronisation Google Sheets"
-    ])
+    ]
+    if "parametres_tab" not in st.session_state or st.session_state["parametres_tab"] not in PARAMETRES_TABS:
+        st.session_state["parametres_tab"] = PARAMETRES_TABS[0]
 
-    with tab_p_ronde:
+    def _on_param_tab_change():
+        val = st.session_state.get("seg_nav_param")
+        if val in PARAMETRES_TABS:
+            st.session_state["parametres_tab"] = val
+
+    if "seg_nav_param" not in st.session_state or st.session_state["seg_nav_param"] != st.session_state["parametres_tab"]:
+        st.session_state["seg_nav_param"] = st.session_state["parametres_tab"]
+
+    param_choice = st.segmented_control(
+        "Navigation Paramètres",
+        options=PARAMETRES_TABS,
+        selection_mode="single",
+        required=True,
+        width="stretch",
+        label_visibility="collapsed",
+        key="seg_nav_param",
+        on_change=_on_param_tab_change
+    )
+    cur_param_tab = param_choice or st.session_state.get("parametres_tab", PARAMETRES_TABS[0])
+    st.write("")
+
+    if cur_param_tab == "🏕️ Informations de la Ronde":
         st.subheader(f"Ronde active : {current_ronde.get('nom')}")
         with st.form("form_update_ronde_page", clear_on_submit=False):
             nom_r = st.text_input("Nom de la ronde", value=current_ronde.get("nom", ""))
@@ -2734,6 +3305,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                 current_ronde["lieu_habituel"] = lieu_r
                 current_ronde["peuplade"] = peuplade_r
                 save_data(db)
+                st.session_state["parametres_tab"] = "🏕️ Informations de la Ronde"
                 st.session_state["flash_success"] = "✅ Informations de la ronde mises à jour !"
                 st.rerun()
 
@@ -2750,13 +3322,14 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                     db["active_ronde_id"] = db["rondes"][0]["id"]
                     st.session_state["active_ronde_id"] = db["rondes"][0]["id"]
                     save_data(db)
+                    st.session_state["parametres_tab"] = "🏕️ Informations de la Ronde"
                     st.session_state["flash_success"] = "🗑️ Ronde supprimée."
                     st.rerun()
             else:
                 st.caption("Vous ne pouvez pas supprimer la seule ronde existante.")
 
     # GESTION DES UTILISATEURS ET DES RÔLES
-    with tab_p_users:
+    elif cur_param_tab == "👥 Gestion des Utilisateurs & Rôles":
         st.subheader("Utilisateurs enregistrés & Rôles d'accès")
         st.caption("Chaque compte est rattaché à une personne du groupe et dispose d'un rôle (Admin, Responsable, Parent).")
         
@@ -2795,6 +3368,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                 with c_back:
                     if st.button("← Retour au tableau", key="btn_back_u_edit", use_container_width=True):
                         st.session_state["p_user_editing_id"] = None
+                        st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                         st.rerun()
                 with c_title:
                     st.markdown(f"##### ✏️ Modifier l'utilisateur : **{target_user.get('prenom', '')} {target_user.get('nom', '')}** (ID #{target_user.get('id')})")
@@ -2846,6 +3420,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
 
                     if sub_cancel:
                         st.session_state["p_user_editing_id"] = None
+                        st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                         st.rerun()
 
                     if sub_edit:
@@ -2871,6 +3446,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
 
                             save_data(db)
                             st.session_state["p_user_editing_id"] = None
+                            st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                             st.session_state["flash_success"] = f"✅ Utilisateur {ed_prenom} {ed_nom} mis à jour avec succès !"
                             st.rerun()
 
@@ -2880,10 +3456,12 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                         db["utilisateurs"] = [x for x in db["utilisateurs"] if x.get("id") != cur_edit_u_id]
                         save_data(db)
                         st.session_state["p_user_editing_id"] = None
+                        st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                         st.session_state["flash_success"] = "🗑️ Compte utilisateur supprimé avec succès."
                         st.rerun()
             else:
                 st.session_state["p_user_editing_id"] = None
+                st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                 st.rerun()
 
         # ÉCRAN 2 : SAISIE POUR AJOUTER UN NOUVEL UTILISATEUR À LA SUITE DU TABLEAU
@@ -2892,6 +3470,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
             with c_back:
                 if st.button("← Retour au tableau", key="btn_back_u_add", use_container_width=True):
                     st.session_state["p_user_adding"] = False
+                    st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                     st.rerun()
             with c_title:
                 st.markdown("##### ➕ Ajouter un nouvel utilisateur à la suite du tableau")
@@ -2925,6 +3504,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
 
                 if sub_canc_u:
                     st.session_state["p_user_adding"] = False
+                    st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                     st.rerun()
 
                 if sub_add_u:
@@ -2949,6 +3529,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                         })
                         save_data(db)
                         st.session_state["p_user_adding"] = False
+                        st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                         st.session_state["flash_success"] = f"✅ Utilisateur {u_prenom} {u_nom} ({u_role}) enregistré !"
                         st.rerun()
 
@@ -2999,12 +3580,14 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                             if st.button("✏️ Modifier", key=f"btn_edit_u_line_{u_id}", use_container_width=True):
                                 st.session_state["p_user_editing_id"] = u_id
                                 st.session_state["p_user_adding"] = False
+                                st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                                 st.rerun()
                         with cb2:
                             if not is_me:
                                 if st.button("🗑️", key=f"btn_del_u_line_{u_id}", use_container_width=True, help="Supprimer cet utilisateur"):
                                     db["utilisateurs"] = [x for x in db["utilisateurs"] if x.get("id") != u_id]
                                     save_data(db)
+                                    st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                                     st.session_state["flash_success"] = f"🗑️ Utilisateur {u.get('prenom')} {u.get('nom')} supprimé."
                                     st.rerun()
                             else:
@@ -3017,11 +3600,12 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
             if st.button("➕ Ajouter un utilisateur à la suite du tableau", type="primary", use_container_width=True, key="btn_trigger_add_user"):
                 st.session_state["p_user_adding"] = True
                 st.session_state["p_user_editing_id"] = None
+                st.session_state["parametres_tab"] = "👥 Gestion des Utilisateurs & Rôles"
                 st.rerun()
 
 
     # SYNCHRONISATION GOOGLE SHEETS
-    with tab_p_sync:
+    elif cur_param_tab == "☁️ Synchronisation Google Sheets":
         st.subheader("☁️ Synchronisation Google Sheets & Collaboratif")
         st.caption("Exportez la totalité des données du site sous forme d'un classeur Excel complet (9 onglets synchronisés avec votre base de données JSON) ou synchronisez depuis un Google Sheet partagé.")
 
@@ -3261,6 +3845,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                                             db["utilisateurs"] = imported_users
 
                                     save_data(db)
+                                    st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
                                     st.session_state["flash_success"] = "✅ Synchronisation réussie avec Google Sheets (toutes les tables à jour) !"
                                     st.rerun()
                                 else:
@@ -3272,6 +3857,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
             if st.button("📤 Régénérer le fichier Excel miroir sur le disque", use_container_width=True):
                 try:
                     build_excel_export_bytes(db, save_path=excel_path)
+                    st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
                     st.session_state["flash_success"] = "✅ Fichier Excel miroir régénéré avec succès avec toutes les données actuelles du site (9 onglets synchronisés) !"
                     st.rerun()
                 except Exception as e:

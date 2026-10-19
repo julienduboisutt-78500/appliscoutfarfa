@@ -11,19 +11,27 @@
       "membres": [
         {
           "id": 1,
-          "prenom": "Julien",
+          "prenom": "JULIEN",
           "nom": "DUBOIS",
           "role": "Responsable",
           "contact": "06 88 12 04 20",
-          "photo": "JD"
+          "photo": "JD",
+          "parents_ids": [],
+          "enfants_ids": [
+            11
+          ]
         },
         {
           "id": 2,
-          "prenom": "Ief",
+          "prenom": "IEF",
           "nom": "BERBEN",
           "role": "Responsable",
           "contact": "06 15 13 67 28",
-          "photo": "IE"
+          "photo": "IE",
+          "parents_ids": [],
+          "enfants_ids": [
+            10
+          ]
         },
         {
           "id": 3,
@@ -31,7 +39,11 @@
           "nom": "ELABBADI",
           "role": "Parent",
           "contact": "",
-          "photo": "NE"
+          "photo": "NE",
+          "parents_ids": [],
+          "enfants_ids": [
+            12
+          ]
         },
         {
           "id": 4,
@@ -39,7 +51,11 @@
           "nom": "GNANAPIRAGASAM",
           "role": "Parent",
           "contact": "",
-          "photo": "JG"
+          "photo": "JG",
+          "parents_ids": [],
+          "enfants_ids": [
+            13
+          ]
         },
         {
           "id": 5,
@@ -47,7 +63,11 @@
           "nom": "GNANAPIRAGASAM",
           "role": "Parent",
           "contact": "",
-          "photo": "LG"
+          "photo": "LG",
+          "parents_ids": [],
+          "enfants_ids": [
+            13
+          ]
         },
         {
           "id": 6,
@@ -55,7 +75,11 @@
           "nom": "HUE",
           "role": "Parent",
           "contact": "",
-          "photo": "SH"
+          "photo": "SH",
+          "parents_ids": [],
+          "enfants_ids": [
+            14
+          ]
         },
         {
           "id": 7,
@@ -63,7 +87,9 @@
           "nom": "LIM",
           "role": "Parent",
           "contact": "",
-          "photo": "LL"
+          "photo": "LL",
+          "parents_ids": [],
+          "enfants_ids": []
         },
         {
           "id": 8,
@@ -71,7 +97,11 @@
           "nom": "MICHEL",
           "role": "Parent",
           "contact": "",
-          "photo": "JM"
+          "photo": "JM",
+          "parents_ids": [],
+          "enfants_ids": [
+            16
+          ]
         },
         {
           "id": 9,
@@ -79,7 +109,11 @@
           "nom": "TRAN",
           "role": "Parent",
           "contact": "",
-          "photo": "TT"
+          "photo": "TT",
+          "parents_ids": [],
+          "enfants_ids": [
+            15
+          ]
         },
         {
           "id": 10,
@@ -87,7 +121,11 @@
           "nom": "BERBEN",
           "role": "Enfant",
           "contact": "",
-          "photo": "AB"
+          "photo": "AB",
+          "parents_ids": [
+            2
+          ],
+          "enfants_ids": []
         },
         {
           "id": 11,
@@ -95,7 +133,11 @@
           "nom": "DUBOIS",
           "role": "Enfant",
           "contact": "",
-          "photo": "KD"
+          "photo": "KD",
+          "parents_ids": [
+            1
+          ],
+          "enfants_ids": []
         },
         {
           "id": 12,
@@ -103,7 +145,11 @@
           "nom": "ELABBADI",
           "role": "Enfant",
           "contact": "",
-          "photo": "FE"
+          "photo": "FE",
+          "parents_ids": [
+            3
+          ],
+          "enfants_ids": []
         },
         {
           "id": 13,
@@ -111,7 +157,12 @@
           "nom": "GNANAPIRAGASAM ",
           "role": "Enfant",
           "contact": "",
-          "photo": "LG"
+          "photo": "LG",
+          "parents_ids": [
+            4,
+            5
+          ],
+          "enfants_ids": []
         },
         {
           "id": 14,
@@ -119,7 +170,11 @@
           "nom": "HUE",
           "role": "Enfant",
           "contact": "",
-          "photo": "MH"
+          "photo": "MH",
+          "parents_ids": [
+            6
+          ],
+          "enfants_ids": []
         },
         {
           "id": 15,
@@ -127,149 +182,1817 @@
           "nom": "TRAN",
           "role": "Enfant",
           "contact": "",
-          "photo": "OT"
+          "photo": "OT",
+          "parents_ids": [
+            9
+          ],
+          "enfants_ids": []
         },
         {
           "id": 16,
-          "prenom": "Anna Rose",
+          "prenom": "ANNA ROSE",
           "nom": "MESEGUER ",
           "role": "Enfant",
           "contact": "",
-          "photo": "AM"
+          "photo": "AM",
+          "parents_ids": [
+            8
+          ],
+          "enfants_ids": []
+        },
+        {
+          "id": 17,
+          "prenom": "SABRINA",
+          "nom": "HUE",
+          "role": "Parent",
+          "contact": "",
+          "photo": "SH",
+          "parents_ids": [],
+          "enfants_ids": []
         }
       ],
       "rencontres": [
         {
-          "id": 2,
-          "titre": "Fête des Grandir",
+          "id": 1,
+          "titre": "Fête des Grandir & Découverte du Cadre Symbolique",
           "type": "Rencontre ronde",
           "date": "2026-11-08",
-          "horaire": "14:00 - 17:00",
-          "lieu": "Local Scout - Parc Municipal",
-          "lieu_adresse": "Local Scout - Parc Municipal",
+          "horaire": "13:30 - 17:30",
+          "lieu": "Local Scout - Notre Dame du Val",
+          "lieu_adresse": "Notre Dame du Val, Sartrouville",
           "lat": 48.9417,
           "lon": 2.1645,
-          "animateur": "Julien et IEF",
+          "animateur": "Julien DUBOIS, Ief BERBEN, Jeninobert GNANAPIRAGASAM",
           "statut": "À venir",
-          "description": "fvdsvddvdvd",
-          "imaginaire_rencontre": "",
-          "objectifs": "",
+          "description": "Première grande rencontre officielle Farfadet de l'année ! Accueil des nouveaux enfants et des 2èmes années, découverte du cadre symbolique de Tom et Prune, découverte des 6 Grandir de la proposition pédagogique Farfadet (avec les autres, son corps, sagesse, ses mains/sa tête, avec Jésus, avec son cœur), cérémonie d'engagement et remise de l'insigne Farfadet. En fin de rencontre : coup de théâtre avec l'ouverture de la malle aux trésors, arrivée du carnet secret de Phileas Fogg, remise des Passeports d'explorateurs pour le Tour du Monde en 80 Jours et grand goûter festif partagé avec les familles.",
+          "imaginaire_rencontre": "Tom et Prune arrivent avec la malle aux trésors scellée. Pour l'ouvrir, les Farfadets doivent relever les défis des 6 Grandir et retrouver les couleurs de l'Arc-en-Ciel ! À la fin, la malle révèle la lettre secrète de Phileas Fogg qui invite la ronde à relever le pari d'un Tour du Monde en 80 Jours !",
+          "objectifs": "1. Vivre une première expérience scoute chaleureuse et faire connaissance. 2. Découvrir les 6 Grandir des Farfadets (pédagogie nationale SGDF). 3. Lancer l'imaginaire annuel du Tour du Monde en 80 Jours avec Phileas Fogg, Tom et Prune.",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
             {
               "date": "08/11/2026",
-              "heure_debut": "14:00",
-              "heure_fin": "14:30",
-              "activite": "Accueil des enfants",
-              "animateur": "TOus",
-              "commentaire": "",
-              "materiels": []
+              "heure_debut": "13:30",
+              "heure_fin": "14:00",
+              "activite": "Accueil des familles & Jeu brise-glace de la pelote de laine",
+              "animateur": "Julien DUBOIS, Ief BERBEN, Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Accueil chaleureux des enfants et parents, jeux d'attente (accroche-décroche), grand cercle de ronde et jeu de la pelote de laine pour tisser les liens et retenir les prénoms.",
+              "materiels": [
+                "Pelote de laine",
+                "Badges prénoms"
+              ]
             },
             {
-              "date": "18/10/2026",
+              "date": "08/11/2026",
+              "heure_debut": "14:00",
+              "heure_fin": "14:20",
+              "activite": "Mise en scène : L'histoire de Tom et Prune & La Malle",
+              "animateur": "Ief BERBEN, Farfadets 2ème année",
+              "commentaire": "Récit conté avec l'aide des 2èmes années : les lutins gardiens des trésors quittent leur village pour rejoindre la ronde. Présentation du grand panneau vers l'Arc-en-Ciel.",
+              "materiels": [
+                "Malle de ronde",
+                "Panneau de l'Arc-en-Ciel",
+                "Bonnets de lutins"
+              ]
+            },
+            {
+              "date": "08/11/2026",
+              "heure_debut": "14:20",
+              "heure_fin": "14:45",
+              "activite": "Grandir avec les Autres : Loto des copains & Jeu de rangement",
+              "animateur": "Julien DUBOIS",
+              "commentaire": "Jeu de critères sans parler (ordre de taille, mois de naissance), suivi du Loto des copains pour aller interroger les autres et découvrir leurs particularités.",
+              "materiels": [
+                "Cartes de loto",
+                "Stylos et feutres"
+              ]
+            },
+            {
+              "date": "08/11/2026",
               "heure_debut": "14:45",
-              "heure_fin": "14:30",
-              "activite": "Fabrication d'hôtels à insectes et semis",
-              "animateur": "Parents animateurs",
-              "commentaire": "",
+              "heure_fin": "15:10",
+              "activite": "Grandir avec son corps : La Traversée de la rivière tumultueuse",
+              "animateur": "Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Parcours moteur d'agilité : traversée de rivière en skate-barque avec corde tendue et saut de rochers en carton. Collage du logo sur le panneau.",
               "materiels": [
-                "Bois, paille, terreau"
+                "Corde épaisse",
+                "Skate-board",
+                "Cartons rochers",
+                "Logo Grandir son corps"
               ]
             },
             {
-              "date": "18/10/2026",
-              "heure_debut": "16:20",
-              "heure_fin": "14:30",
-              "activite": "Goûter partagé",
-              "animateur": "Parents",
-              "commentaire": "",
+              "date": "08/11/2026",
+              "heure_debut": "15:10",
+              "heure_fin": "15:35",
+              "activite": "Grandir avec Sagesse : Téléphone arabe & Bâton de parole",
+              "animateur": "Ief BERBEN",
+              "commentaire": "Démonstration par le téléphone arabe croisé qu'il est impossible de comprendre si on n'écoute pas. Réflexion sur les règles de parole et découverte du bâton de parole.",
               "materiels": [
-                "Jus de fruits, compotes"
+                "Bâton de parole brut",
+                "Logo Grandir Sagesse"
               ]
             },
             {
-              "date": "18/10/2026",
+              "date": "08/11/2026",
+              "heure_debut": "15:35",
+              "heure_fin": "16:00",
+              "activite": "Grandir avec ses mains et sa tête : Décoration & Charte de la Ronde",
+              "animateur": "Julien DUBOIS, Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Décoration nature du bâton de parole (rubans, colle, plumes, feutres) et réflexion collective pour rédiger et signer la Charte de vie de la Ronde.",
+              "materiels": [
+                "Rubans",
+                "Colle",
+                "Feutres",
+                "Grande feuille Charte de Ronde"
+              ]
+            },
+            {
+              "date": "08/11/2026",
+              "heure_debut": "16:00",
+              "heure_fin": "16:30",
+              "activite": "Grandir avec Jésus : Photolangage nature & Le Petit Prince",
+              "animateur": "Ief BERBEN",
+              "commentaire": "En haut de la montagne : contemplation de la nature par le photolangage, lecture du Petit Prince et le renard (apprivoiser / créer des liens), geste des cailloux d'amitié et prière Farfadet.",
+              "materiels": [
+                "Photos paysages",
+                "Cailloux lisses",
+                "Feuilles prière Farfadet"
+              ]
+            },
+            {
+              "date": "08/11/2026",
+              "heure_debut": "16:30",
+              "heure_fin": "16:50",
+              "activite": "Grandir avec son cœur : L'Arc-en-Ciel des émotions & Mémory",
+              "animateur": "Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Positionnement de son prénom sur les couleurs de l'arc-en-ciel selon son météo intérieur, jeu du mémory des émotions des lutins.",
+              "materiels": [
+                "Mémory des lutins",
+                "Étiquettes prénoms",
+                "Logo Grandir son cœur"
+              ]
+            },
+            {
+              "date": "08/11/2026",
               "heure_debut": "16:50",
-              "heure_fin": "14:30",
-              "activite": "Prière des Farfadets & Envoi",
-              "animateur": "Christophe",
-              "commentaire": "",
+              "heure_fin": "17:15",
+              "activite": "Cérémonial des Grandir, Remise des Insignes & Chant Farfadet",
+              "animateur": "Julien DUBOIS, Responsables",
+              "commentaire": "Cérémonie solennelle en présence de tous les parents : engagement des enfants à grandir ensemble, remise de l'insigne officiel Farfadet à chacun et chant de ronde.",
               "materiels": [
-                "Bougie LED"
-              ]
-            }
-          ],
-          "materiels": []
-        },
-        {
-          "id": 3,
-          "titre": "Rencontre N°1 - Thème à définir",
-          "type": "Rencontre ronde",
-          "date": "2026-11-29",
-          "horaire": "14:00 - 17:00",
-          "lieu": "Local Scout - Notre Dame du Val",
-          "lieu_adresse": "Local Scout - Notre Dame du Val",
-          "lat": 48.9417,
-          "lon": 2.1645,
-          "animateur": "",
-          "statut": "À venir",
-          "description": "",
-          "imaginaire_rencontre": "",
-          "objectifs": "",
-          "photo": "",
-          "colonnes_deroule": [],
-          "deroule": [
-            {
-              "date": "13/10/2026",
-              "heure_debut": "14:00",
-              "heure_fin": "14:30",
-              "activite": "Accueil et cri de ronde",
-              "animateur": "",
-              "commentaire": "Rassemblement en cercle",
-              "materiels": [
-                "Foulards de ronde"
+                "Insignes Farfadets SGDF",
+                "Carnet de chants scouts"
               ]
             },
             {
-              "date": "13/10/2026",
-              "heure_debut": "14:30",
-              "heure_fin": "16:15",
-              "activite": "Activité principale",
-              "animateur": "",
-              "commentaire": "Jeu par sizaine",
-              "materiels": []
-            },
-            {
-              "date": "13/10/2026",
-              "heure_debut": "16:15",
-              "heure_fin": "17:00",
-              "activite": "Goûter & Bilan",
-              "animateur": "Parents",
-              "commentaire": "Nettoyage et fin",
+              "date": "08/11/2026",
+              "heure_debut": "17:15",
+              "heure_fin": "17:30",
+              "activite": "Coup de théâtre de Phileas Fogg, Remise des Passeports & Goûter",
+              "animateur": "Tous",
+              "commentaire": "Ouverture du coffre scellé de la malle : lecture de la lettre de Phileas Fogg, lancement de l'épopée du Tour du Monde en 80 Jours, remise des Passeports de voyage et goûter festif.",
               "materiels": [
-                "Goûter et compotes"
+                "Lettre de Phileas Fogg",
+                "Passeports Farfadets",
+                "Gâteaux et boissons du goûter"
               ]
             }
           ],
           "materiels": [
             {
               "id": 1,
-              "nom": "Foulards de ronde",
-              "qui_amene": "",
-              "photo": ""
+              "nom": "Insignes officiels Farfadets SGDF",
+              "qui_amene": "Julien (Responsable)",
+              "photo": "",
+              "remarque": "1 par enfant de la ronde",
+              "ok": true
             },
             {
               "id": 2,
-              "nom": "Goûter et compotes",
+              "nom": "Panneau de l'Arc-en-Ciel & Logos des 6 Grandir",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "Support visuel préparé à l'avance",
+              "ok": true
+            },
+            {
+              "id": 3,
+              "nom": "Chapeau haut-de-forme & Boussole de Phileas Fogg",
+              "qui_amene": "Julien",
+              "photo": "",
+              "remarque": "Déguisement pour l'imaginaire",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Bonnets verts de lutins (Tom et Prune)",
+              "qui_amene": "Jeni",
+              "photo": "",
+              "remarque": "Accessoires de conte",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Passeports du Tour du Monde en 80 Jours",
+              "qui_amene": "Julien",
+              "photo": "",
+              "remarque": "Carnets individuels imprimés",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Matériel sportif : Corde épaisse, skate et cartons de rochers",
+              "qui_amene": "Jeni",
+              "photo": "",
+              "remarque": "Pour le parcours moteur de la rivière",
+              "ok": false
+            },
+            {
+              "id": 7,
+              "nom": "Matériel manuel : Bâton de parole, colle, rubans, plumes",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "Pour décorer le bâton de parole",
+              "ok": false
+            },
+            {
+              "id": 8,
+              "nom": "Cailloux d'amitié & Feuilles de prière Farfadet",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "1 caillou lisse par enfant",
+              "ok": false
+            },
+            {
+              "id": 9,
+              "nom": "Goûter festif partagé et boissons",
               "qui_amene": "Parents",
-              "photo": ""
+              "photo": "",
+              "remarque": "Jus de fruits, gâteaux et serviettes",
+              "ok": false
             }
-          ]
+          ],
+          "compte_rendu": "Excellente séance de rentrée ! Les enfants ont été captivés par l'histoire de Tom et Prune et le coup de théâtre de Phileas Fogg. Les badges des Grandir ont suscité beaucoup de fierté. Prévoir un peu plus d'eau pour les jeux en extérieur."
+        },
+        {
+          "id": 2,
+          "titre": "Le Grand Départ de France : À travers nos Régions !",
+          "type": "Rencontre ronde",
+          "date": "2026-11-29",
+          "horaire": "10:30 - 15:30",
+          "lieu": "Local Scout & Parc Municipal",
+          "lieu_adresse": "Notre Dame du Val & Parc Municipal, Sartrouville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Sabrina HUE, Parents",
+          "statut": "À venir",
+          "description": "C'est le grand jour du départ officiel de l'imaginaire ! Avant de franchir les frontières du monde, Phileas Fogg, Tom et Prune font décoller la montgolfière au-dessus de la France pour une première escale gourmande et festive à travers nos terroirs. Les Farfadets découvrent les trésors de nos régions : les phares et galettes de Bretagne, les herbes et senteurs de Provence, le pain d'épices d'Alsace, et les grands jeux traditionnels du patrimoine français. Confection de mini-montgolfières Farfadets, dégustation de crêpes et premier tampon officiel 'Départ de France' sur le Passeport !",
+          "imaginaire_rencontre": "Phileas Fogg allume le brûleur de la montgolfière ! Tom et Prune ont réuni toutes leurs affaires dans la malle de voyage. Mais avant de s'élancer vers les océans lointains, un coup de vent emporte la montgolfière au-dessus des magnifiques provinces françaises. Pour tester leur courage d'explorateurs, les Farfadets doivent récolter les spécialités et savoir-faire des quatre coins de l'Hexagone.",
+          "objectifs": "1. Lancer activement l'épopée du voyage et tester les équipements d'explorateurs. 2. Découvrir la diversité culturelle, géographique et culinaire des régions françaises. 3. Développer l'esprit d'équipe à travers des jeux traditionnels de terroirs.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "29/11/2026",
+              "heure_debut": "10:30",
+              "heure_fin": "11:00",
+              "activite": "Gonflement de la Montgolfière & Briefing du Départ",
+              "animateur": "Sabrina HUE",
+              "commentaire": "Vérification des équipements d'explorateurs, boussoles, passeports et cri de ronde de départ sous la bannière tricolore.",
+              "materiels": [
+                "Bannière de départ",
+                "Passeports Farfadets"
+              ]
+            },
+            {
+              "date": "29/11/2026",
+              "heure_debut": "11:00",
+              "heure_fin": "12:15",
+              "activite": "Le Grand Jeu des Régions de France",
+              "animateur": "Sabrina HUE, Parents",
+              "commentaire": "Jeu d'orientation par étapes dans le parc : relais des pêcheurs bretons, parcours d'agilité de la montagne alpine, énigmes de Provence.",
+              "materiels": [
+                "Cartes des régions de France",
+                "Boussoles scoutes",
+                "Balises de terroir"
+              ]
+            },
+            {
+              "date": "29/11/2026",
+              "heure_debut": "12:15",
+              "heure_fin": "13:15",
+              "activite": "Pique-nique du Terroir & Buffet des Régions",
+              "animateur": "Parents",
+              "commentaire": "Repas tiré du sac et découverte partagée : sablés bretons, pain d'épices d'Alsace, fromages doux et jus de pomme fermier.",
+              "materiels": [
+                "Nappes de pique-nique",
+                "Jus de pomme fermier",
+                "Sablés et pain d'épices"
+              ]
+            },
+            {
+              "date": "29/11/2026",
+              "heure_debut": "13:15",
+              "heure_fin": "13:45",
+              "activite": "Temps calme : Contes & Légendes de nos Régions",
+              "animateur": "Sabrina HUE",
+              "commentaire": "Légende de la forêt de Brocéliande et contes de nos provinces, moment de repos sous les arbres.",
+              "materiels": [
+                "Livre de contes régionaux",
+                "Tapis de sol"
+              ]
+            },
+            {
+              "date": "29/11/2026",
+              "heure_debut": "13:45",
+              "heure_fin": "14:45",
+              "activite": "Atelier Artisanat : Confection de la Mini-Montgolfière Farfadet",
+              "animateur": "Parents",
+              "commentaire": "Fabrication d'une montgolfière miniature personnalisée avec ballon, nacelle en carton, ficelle scoute et fanions décorés.",
+              "materiels": [
+                "Ballons de baudruche",
+                "Petits pots nacelles",
+                "Ficelle sisal",
+                "Feutres"
+              ]
+            },
+            {
+              "date": "29/11/2026",
+              "heure_debut": "14:45",
+              "heure_fin": "15:15",
+              "activite": "Grand Atelier Crêpes & Saveurs françaises",
+              "animateur": "Parents",
+              "commentaire": "Dégustation festive de crêpes moelleuses préparées ensemble, confitures artisanales et chant scout des explorateurs.",
+              "materiels": [
+                "Crêpière / crêpes fraîches",
+                "Confitures artisanales",
+                "Chocolat à tartiner"
+              ]
+            },
+            {
+              "date": "29/11/2026",
+              "heure_debut": "15:15",
+              "heure_fin": "15:30",
+              "activite": "Premier Tampon officiel : Visa 'Départ de France' & Envoi",
+              "animateur": "Sabrina HUE",
+              "commentaire": "Validation officielle du tout premier visa 'France' sur les passeports et envol imaginaire au-dessus des frontières !",
+              "materiels": [
+                "Tampon encreur Départ de France",
+                "Passeports Farfadets"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Déguisements : Bérets traditionnels, marinières ou écharpes tricolores",
+              "qui_amene": "Sabrina",
+              "photo": "",
+              "remarque": "Tenue d'explorateurs français au départ",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Ballons de baudruche solides, petits pots nacelles et ficelles",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Pour fabriquer les mini-montgolfières",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Crêpes fraîches, confitures artisanales et jus de pomme",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Dégustation des saveurs de nos terroirs",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Cartes des régions de France et boussoles scoutes",
+              "qui_amene": "Sabrina",
+              "photo": "",
+              "remarque": "Pour le grand jeu d'orientation",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Tampon encreur officiel 'Départ de France'",
+              "qui_amene": "Responsable",
+              "photo": "",
+              "remarque": "Premier visa du passeport",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 3,
+          "titre": "Escale de la Paix : La Lumière de Bethléem & La Grande Bonne Action",
+          "type": "Rencontre ronde",
+          "date": "2026-12-13",
+          "horaire": "13:30 - 17:30",
+          "lieu": "Local Scout & Résidence des Aînés de Sartrouville",
+          "lieu_adresse": "Notre Dame du Val & Résidence Aînés, Sartrouville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Lina LIM, Justine MICHEL",
+          "statut": "À venir",
+          "description": "Une rencontre scoute d'une grande intensité humaine sous le signe de l'Avent et de l'espérance ! Accueil de la Lumière de la Paix de Bethléem allumée dans la grotte de la Nativité. Réalisation de la Grande Bonne Action Scoute (B.A.) : confection de lanternes vitrail étincelantes et de cartes de vœux illustrées, puis visite chaleureuse auprès des aînés de la ville pour leur apporter la lumière, des chants de Noël et de tendres sourires partagés. Goûter festif de Noël avec sablés épicés et chocolat chaud !",
+          "imaginaire_rencontre": "En survolant le Proche-Orient, la montgolfière de Phileas Fogg fait escale à Bethléem. Tom et Prune découvrent une petite flamme qui brille jour et nuit : la Lumière de la Paix ! Phileas Fogg explique aux Farfadets que le plus précieux des trésors de la Terre est de faire plaisir aux autres. La ronde est investie d'une noble mission : devenir des semeurs de lumière et accomplir une grande Bonne Action scoute !",
+          "objectifs": "1. Découvrir et transmettre le symbole universel de la Lumière de Bethléem. 2. Vivre concrètement la Bonne Action (B.A.) scoute en offrant présence, chaleur et douceurs aux personnes âgées ou isolées. 3. Développer l'empathie, la générosité et l'esprit de service.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "13/12/2026",
+              "heure_debut": "13:30",
+              "heure_fin": "14:00",
+              "activite": "Accueil & Arrivée solennelle de la Lumière de Bethléem",
+              "animateur": "Lina LIM, Justine MICHEL",
+              "commentaire": "Rassemblement en cercle autour de la lanterne de Bethléem, récit du voyage extraordinaire de la flamme à travers le monde et chant de paix.",
+              "materiels": [
+                "Lanterne tempête avec la flamme de Bethléem"
+              ]
+            },
+            {
+              "date": "13/12/2026",
+              "heure_debut": "14:00",
+              "heure_fin": "15:00",
+              "activite": "Atelier des Lanternes d'Étoiles & Cartes du Cœur",
+              "animateur": "Justine MICHEL, Lina LIM",
+              "commentaire": "Confection soignée de photophores vitrail (bocaux en verre, papiers transparents colorés, pochoirs d'étoiles) et écriture de cartes de vœux pleines d'amour.",
+              "materiels": [
+                "Bocaux en verre",
+                "Papiers vitrail",
+                "Colle vernis",
+                "Cartes bristol",
+                "Feutres dorés"
+              ]
+            },
+            {
+              "date": "13/12/2026",
+              "heure_debut": "15:00",
+              "heure_fin": "16:15",
+              "activite": "LA GRANDE BONNE ACTION SCOUTE : Visite et Partage aux Aînés",
+              "animateur": "Tous, Lina LIM, Justine MICHEL, Parents",
+              "commentaire": "Marche joyeuse vers la résidence des aînés : remise en mains propres des lanternes allumées et des cartes, chants de Noël interprétés en chœur, échanges intergénérationnels très chaleureux.",
+              "materiels": [
+                "Veilleuses LED sécurisées",
+                "Cartes de vœux",
+                "Boîtes de sablés de Noël"
+              ]
+            },
+            {
+              "date": "13/12/2026",
+              "heure_debut": "16:15",
+              "heure_fin": "17:00",
+              "activite": "Temps spi de la Paix & Conte du quatrième Roi Mage",
+              "animateur": "Justine MICHEL",
+              "commentaire": "Temps spirituel scout autour de la flamme, lecture du conte de l'espérance, chant 'La paix sera son nom' et prière Farfadet.",
+              "materiels": [
+                "Prière des Farfadets",
+                "Bougies LED"
+              ]
+            },
+            {
+              "date": "13/12/2026",
+              "heure_debut": "17:00",
+              "heure_fin": "17:30",
+              "activite": "Goûter solidaire de Noël & Tampon de la Paix",
+              "animateur": "Lina LIM",
+              "commentaire": "Dégustation de pain d'épices, sablés à la cannelle faits maison, chocolat chaud fumant et validation du tampon 'Lumière de Bethléem' sur les passeports.",
+              "materiels": [
+                "Pain d'épices",
+                "Sablés de Noël",
+                "Chocolat chaud",
+                "Tampon Bethléem"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Lanterne tempête & Flamme officielle de Bethléem",
+              "qui_amene": "Justine",
+              "photo": "",
+              "remarque": "Flamme rapportée par les pionniers/caravelles",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Veilleuses LED sécurisées & Bougies chauffe-plat",
+              "qui_amene": "Lina",
+              "photo": "",
+              "remarque": "Pour illuminer les lanternes des enfants et des aînés",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Bocaux en verre propres, papier vitrail de couleur & Colle",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "1 bocal par enfant",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Papier canson épais, feutres dorés/argentés et rubans",
+              "qui_amene": "Justine",
+              "photo": "",
+              "remarque": "Pour les cartes de vœux",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Déguisements : Bonnets de lutins d'hiver et écharpes de fête",
+              "qui_amene": "Lina",
+              "photo": "",
+              "remarque": "Tenue festive pour la visite",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Sablés de Noël faits maison, pain d'épices & Chocolat chaud",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "À offrir aux aînés et pour le goûter de ronde",
+              "ok": false
+            },
+            {
+              "id": 7,
+              "nom": "Tampon encreur 'Escale de la Paix - Bethléem'",
+              "qui_amene": "Responsable",
+              "photo": "",
+              "remarque": "Pour le passeport Farfadet",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 4,
+          "titre": "Escale au Maroc : Les Trésors de l'Atlas & Caravane des Épices",
+          "type": "Rencontre ronde",
+          "date": "2027-01-17",
+          "horaire": "10:30 - 15:30",
+          "lieu": "Local Scout & Parc Municipal",
+          "lieu_adresse": "Notre Dame du Val & Parc Municipal, Sartrouville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Nabil ELABBADI, Jeninobert GNANAPIRAGASAM",
+          "statut": "À venir",
+          "description": "Escale au Maroc, porte d'entrée de l'Afrique et du désert ! Grand jeu d'orientation dans le parc 'La Caravane de l'Atlas' pour ravitailler les oasis, découverte sensorielle des épices et herbes aromatiques, repas nomade partagé sous la tente berbère, atelier de zelliges en mosaïque et initiation à la calligraphie arabe de son prénom. En fin d'après-midi : cérémonie conviviale du thé à la menthe doux avec dégustation de douceurs orientales et tamponnage du visa 'Maroc' sur le Passeport Farfadet !",
+          "imaginaire_rencontre": "La montgolfière de Phileas Fogg atterrit au cœur de la palmeraie de Marrakech ! Tom et Prune découvrent un pays chaleureux où l'accueil du voyageur est sacré. Pour franchir les montagnes escarpées de l'Atlas et poursuivre le tour du globe, la caravane des Farfadets doit coopérer et réunir les ingrédients du thé de l'hospitalité.",
+          "objectifs": "Découvrir la culture marocaine et l'hospitalité orientale, développer l'orientation et l'entraide par un grand jeu de caravane, éveil des sens culinaires autour des épices et du thé à la menthe doux, création artistique de mosaïques zelliges.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "17/01/2027",
+              "heure_debut": "10:30",
+              "heure_fin": "11:00",
+              "activite": "Arrivée à Marrakech & Enfilage des Chèches",
+              "animateur": "Nabil ELABBADI, Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Accueil en musique marocaine, vérification des passeports par Phileas Fogg, enfilage des chèches du désert et cri de ronde.",
+              "materiels": [
+                "Enceinte et musique orientale",
+                "Passeports Farfadets"
+              ]
+            },
+            {
+              "date": "17/01/2027",
+              "heure_debut": "11:00",
+              "heure_fin": "12:15",
+              "activite": "Le Grand Jeu de la Caravane de l'Atlas",
+              "animateur": "Nabil ELABBADI, Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Jeu d'orientation par équipe dans le parc : suivre la carte des étoiles, traverser les dunes sans renverser l'eau sacrée et ravitailler les oasis.",
+              "materiels": [
+                "Cartes du parc",
+                "Boussoles",
+                "Gourdes d'eau",
+                "Balises oasis"
+              ]
+            },
+            {
+              "date": "17/01/2027",
+              "heure_debut": "12:15",
+              "heure_fin": "13:15",
+              "activite": "Découverte culinaire & Pique-nique de la Palmeraie",
+              "animateur": "Parents",
+              "commentaire": "Repas tiré du sac sous la tente nomade, dégustation de dattes Medjoul, carottes râpées à la fleur d'oranger et pain marocain (batbout).",
+              "materiels": [
+                "Nappes et tapis berbères",
+                "Dattes fraîches",
+                "Salade de carottes fleur d'oranger"
+              ]
+            },
+            {
+              "date": "17/01/2027",
+              "heure_debut": "13:15",
+              "heure_fin": "13:45",
+              "activite": "Temps calme sous la tente : Conte des Mille et Une Nuits",
+              "animateur": "Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Conte traditionnel marocain sur la sagesse et le partage, moment de repos et de détente musicale.",
+              "materiels": [
+                "Coussins",
+                "Livre de contes orientaux"
+              ]
+            },
+            {
+              "date": "17/01/2027",
+              "heure_debut": "13:45",
+              "heure_fin": "14:30",
+              "activite": "Atelier Artisanat : Mosaïque Zellige & Calligraphie du prénom",
+              "animateur": "Nabil ELABBADI, Parents",
+              "commentaire": "Collage de tesselles de papier géométrique pour créer son carrelage zellige et apprentissage des lettres arabes pour écrire son prénom au calame.",
+              "materiels": [
+                "Papiers colorés mosaïque",
+                "Colle",
+                "Calames en bambou",
+                "Encre"
+              ]
+            },
+            {
+              "date": "17/01/2027",
+              "heure_debut": "14:30",
+              "heure_fin": "15:15",
+              "activite": "Cérémonie du Thé à la Menthe & Pâtisseries aux amandes",
+              "animateur": "Jeninobert GNANAPIRAGASAM, Nabil ELABBADI",
+              "commentaire": "Préparation collective du thé à la menthe doux avec les enfants, dégustation de cornes de gazelle et gâteaux de semoule, chant scout.",
+              "materiels": [
+                "Théière marocaine",
+                "Menthe fraîche",
+                "Thé vert doux",
+                "Cornes de gazelle"
+              ]
+            },
+            {
+              "date": "17/01/2027",
+              "heure_debut": "15:15",
+              "heure_fin": "15:30",
+              "activite": "Tamponnage du Visa Maroc sur les Passeports & Envoi",
+              "animateur": "Nabil ELABBADI",
+              "commentaire": "Validation officielle du tampon 'Maroc' sur le Passeport de chaque enfant et cri de ronde final.",
+              "materiels": [
+                "Tampon encreur Maroc",
+                "Passeports Farfadets"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Déguisements : Chèches touaregs & Djellabas légères",
+              "qui_amene": "Jeni",
+              "photo": "",
+              "remarque": "Pour habiller la ronde aux couleurs du désert",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Théière marocaine traditionnelle & Petits verres à thé",
+              "qui_amene": "Nabil",
+              "photo": "",
+              "remarque": "Pour la cérémonie du thé à la menthe",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Menthe fraîche, thé vert doux et morceaux de sucre",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Ingrédients du thé convivial",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Dattes Medjoul, carottes râpées fleur d'oranger & Pâtisseries",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Buffet culinaire oriental",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Feuilles rigides, papiers mosaïques découpés, colle et calames",
+              "qui_amene": "Nabil",
+              "photo": "",
+              "remarque": "Pour l'atelier zellige et calligraphie",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Grands draps colorés et coussins pour la tente nomade",
+              "qui_amene": "Jeni",
+              "photo": "",
+              "remarque": "Aménagement du coin repos",
+              "ok": false
+            },
+            {
+              "id": 7,
+              "nom": "Tampon encreur officiel 'Visa Maroc'",
+              "qui_amene": "Responsable",
+              "photo": "",
+              "remarque": "Pour les passeports de voyage",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 5,
+          "titre": "Escale au Portugal : Les Caravelles des Grands Navigateurs",
+          "type": "Rencontre ronde",
+          "date": "2027-02-28",
+          "horaire": "10:30 - 15:30",
+          "lieu": "Local Scout & Bords de Seine",
+          "lieu_adresse": "Bords de Seine & Notre Dame du Val, Sartrouville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Julien DUBOIS, Sabrina HUE",
+          "statut": "À venir",
+          "description": "Escale portuaire au pays des grands explorateurs maritimes ! Au départ de la tour de Belém à Lisbonne, les Farfadets hissent les voiles. Grand jeu de navigation à la boussole et repérage aux étoiles, initiation aux nœuds marins scouts, atelier artistique de peinture d'Azulejos (carreaux de faïence bleus traditionnels), et dégustation des célèbres Pasteis de Nata dorés et croustillants !",
+          "imaginaire_rencontre": "La montgolfière se pose au port de Lisbonne face à l'immensité de l'océan Atlantique. Phileas Fogg confie la barre des caravelles à Tom et Prune. Pour affronter les flots et tracer la route des Indes, les Farfadets doivent prouver leur sens marin et charger la cargaison d'Azulejos précieux.",
+          "objectifs": "S'initier aux techniques de navigation scoutes (boussole, nœuds de marin), découvrir l'art traditionnel portugais des Azulejos, développer l'esprit d'équipage et la persévérance.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "28/02/2027",
+              "heure_debut": "10:30",
+              "heure_fin": "11:00",
+              "activite": "Rassemblement sur le quai de Lisbonne",
+              "animateur": "Julien DUBOIS, Sabrina HUE",
+              "commentaire": "Constitution des équipages de caravelles, cri des marins, enfilage des marinières et passeports.",
+              "materiels": [
+                "Foulards marins",
+                "Passeports Farfadets"
+              ]
+            },
+            {
+              "date": "28/02/2027",
+              "heure_debut": "11:00",
+              "heure_fin": "12:15",
+              "activite": "Le Grand Jeu des Explorateurs de l'Atlantique",
+              "animateur": "Julien DUBOIS",
+              "commentaire": "Jeu de piste à la boussole sur les bords de Seine : retrouver les comptoirs maritimes et surmonter les épreuves de nœuds de marin scouts.",
+              "materiels": [
+                "Boussoles scoutes",
+                "Bouts de corde",
+                "Balises de comptoirs"
+              ]
+            },
+            {
+              "date": "28/02/2027",
+              "heure_debut": "12:15",
+              "heure_fin": "13:15",
+              "activite": "Pique-nique des Moussaillons",
+              "animateur": "Sabrina HUE, Parents",
+              "commentaire": "Pain croustillant, salade de pois chiches à la coriandre, sardines ou thon doux, fruits frais et jus d'agrumes.",
+              "materiels": [
+                "Nappes maritimes",
+                "Salade de pois chiches",
+                "Jus d'agrumes"
+              ]
+            },
+            {
+              "date": "28/02/2027",
+              "heure_debut": "13:15",
+              "heure_fin": "13:45",
+              "activite": "Chants marins & Légende du Coq de Barcelos",
+              "animateur": "Julien DUBOIS",
+              "commentaire": "Chants scouts marins en chœur et conte symbolique du coq porte-bonheur de Barcelos.",
+              "materiels": [
+                "Carnet de chants scouts"
+              ]
+            },
+            {
+              "date": "28/02/2027",
+              "heure_debut": "13:45",
+              "heure_fin": "14:45",
+              "activite": "Atelier d'Art : Peinture d'Azulejos portugais",
+              "animateur": "Sabrina HUE",
+              "commentaire": "Peinture sur carreaux de faïence blanche ou sous-verres avec motifs géométriques et marins bleus.",
+              "materiels": [
+                "Carreaux de faïence blanche",
+                "Peinture bleue outremer",
+                "Pinceaux fins"
+              ]
+            },
+            {
+              "date": "28/02/2027",
+              "heure_debut": "14:45",
+              "heure_fin": "15:15",
+              "activite": "Dégustation culinaire : Pasteis de Nata chauds & Cannelle",
+              "animateur": "Parents",
+              "commentaire": "Dégustation des petits flans feuilletés dorés saupoudrés de cannelle tiède.",
+              "materiels": [
+                "Pasteis de Nata",
+                "Cannelle en poudre"
+              ]
+            },
+            {
+              "date": "28/02/2027",
+              "heure_debut": "15:15",
+              "heure_fin": "15:30",
+              "activite": "Tampon Portugal & Rassemblement de clôture",
+              "animateur": "Julien DUBOIS",
+              "commentaire": "Tamponnage officiel du visa Portugal sur les passeports et envoi.",
+              "materiels": [
+                "Tampon Portugal",
+                "Passeports Farfadets"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Déguisements : Marinières rayées bleues & Bicornes d'explorateurs",
+              "qui_amene": "Sabrina",
+              "photo": "",
+              "remarque": "Tenue d'équipage de caravelle",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Boussoles de visée scoutes & Cartes marines",
+              "qui_amene": "Julien",
+              "photo": "",
+              "remarque": "Pour le grand jeu d'orientation",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Cordes de matelotage (nœud plat, nœud de huit)",
+              "qui_amene": "Julien",
+              "photo": "",
+              "remarque": "Pour l'atelier de nœuds marins",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Carreaux de faïence blanche ou sous-verres en bois",
+              "qui_amene": "Sabrina",
+              "photo": "",
+              "remarque": "Supports pour l'atelier Azulejos",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Peinture acrylique bleue lavable, godets et pinceaux",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Matériel d'artisanat",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Pasteis de Nata feuilletés et cannelle",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Spécialité culinaire portugaise",
+              "ok": false
+            },
+            {
+              "id": 7,
+              "nom": "Tampon encreur 'Portugal - Caravelle'",
+              "qui_amene": "Responsable",
+              "photo": "",
+              "remarque": "Pour les passeports de voyage",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 6,
+          "titre": "Escale en Belgique : Le Royaume de la BD & Les Petits Détectives",
+          "type": "Rencontre ronde",
+          "date": "2027-03-21",
+          "horaire": "10:30 - 15:30",
+          "lieu": "Local Scout & Forêt",
+          "lieu_adresse": "Notre Dame du Val & Forêt, Sartrouville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Ief BERBEN, Parents",
+          "statut": "À venir",
+          "description": "Escale joyeuse et malicieuse en Belgique, berceau de la bande dessinée ! Grand Cluedo scout grandeur nature dans la forêt avec loupes et messages codés pour retrouver la boussole d'or dérobée à Phileas Fogg, création collective d'une planche de BD géante 'Les Aventures de Tom et Prune', et grand atelier culinaire de gaufres liégeoises caramélisées au sucre perlé avec chocolat belge fondu !",
+          "imaginaire_rencontre": "En survolant la Belgique, un corbeau farceur a chipé la boussole d'or de Phileas Fogg ! Tom et Prune enfilent leurs casquettes de détectives reporters à la manière de Tintin. Les Farfadets vont devoir déchiffrer les rébus et suivre les empreintes cachées pour reconstituer l'album disparu et retrouver la boussole.",
+          "objectifs": "Développer le sens de l'observation et la déduction logique, stimuler l'imagination et l'expression graphique (BD), vivre un atelier cuisine convivial et gourmand.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "21/03/2027",
+              "heure_debut": "10:30",
+              "heure_fin": "11:00",
+              "activite": "Rassemblement des Détectives à Bruxelles",
+              "animateur": "Ief BERBEN",
+              "commentaire": "Briefing secret de la mission, remise des loupes d'enquêteurs, casquettes et passeports.",
+              "materiels": [
+                "Loupes",
+                "Badges d'enquêteurs",
+                "Passeports Farfadets"
+              ]
+            },
+            {
+              "date": "21/03/2027",
+              "heure_debut": "11:00",
+              "heure_fin": "12:30",
+              "activite": "Le Grand Jeu d'Enquête en Forêt : Le Mystère de la Boussole d'Or",
+              "animateur": "Ief BERBEN, Parents",
+              "commentaire": "Piste d'indices, énigmes de bande dessinée, messages secrets au citron et défis d'adresse par équipes.",
+              "materiels": [
+                "Indices plastifiés",
+                "Messages secrets",
+                "Fausse boussole d'or"
+              ]
+            },
+            {
+              "date": "21/03/2027",
+              "heure_debut": "12:30",
+              "heure_fin": "13:30",
+              "activite": "Pique-nique convivial des Reporters",
+              "animateur": "Parents",
+              "commentaire": "Repas tiré du sac et dégustation de bâtonnets de légumes croquants.",
+              "materiels": [
+                "Nappes de pique-nique"
+              ]
+            },
+            {
+              "date": "21/03/2027",
+              "heure_debut": "13:30",
+              "heure_fin": "14:30",
+              "activite": "Atelier Créatif : La Planche de Bande Dessinée Farfadet",
+              "animateur": "Ief BERBEN, Parents",
+              "commentaire": "Dessin et coloriage de bulles de dialogue et saynètes humoristiques racontant l'aventure du jour.",
+              "materiels": [
+                "Planches de BD vierges A3",
+                "Feutres",
+                "Bulles adhésives"
+              ]
+            },
+            {
+              "date": "21/03/2027",
+              "heure_debut": "14:30",
+              "heure_fin": "15:15",
+              "activite": "Atelier Culinaire : Cuisson des Gaufres Liégeoises & Chocolat belge",
+              "animateur": "Parents",
+              "commentaire": "Cuisson minute au gaufrier, ajout du sucre perlé et coulis de chocolat noir fondu.",
+              "materiels": [
+                "Gaufrier électrique",
+                "Pâte à gaufres liégeoises",
+                "Chocolat belge fondu"
+              ]
+            },
+            {
+              "date": "21/03/2027",
+              "heure_debut": "15:15",
+              "heure_fin": "15:30",
+              "activite": "Tampon Belgique & Clôture",
+              "animateur": "Ief BERBEN",
+              "commentaire": "Validation du visa Belgique sur les passeports et dispersion.",
+              "materiels": [
+                "Tampon Belgique",
+                "Passeports Farfadets"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Déguisements : Imperméables trench-coat, loupes & Casquettes de reporters",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "Accessoires de petits détectives (style Tintin)",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Gaufrier électrique & Rallonge sécurisée",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Pour la cuisson sur place",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Pâte à gaufres liégeoises avec sucre perlé & Chocolat belge",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Ingrédients gourmands",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Indices plastifiés, messages codés et boussole dorée cachée",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "Accessoires du grand jeu d'enquête",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Feuilles A3 épaisses avec cases de BD imprimées et feutres",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Pour l'atelier bande dessinée",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Tampon encreur 'Belgique - Gaufre & BD'",
+              "qui_amene": "Responsable",
+              "photo": "",
+              "remarque": "Pour les passeports de voyage",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 7,
+          "titre": "Camp Territorial : Le Grand Sommet International des Explorateurs",
+          "type": "Week-end de ronde",
+          "date": "2027-04-24",
+          "horaire": "Samedi 14:00 - Dimanche 16:00",
+          "lieu": "Base Scoute Territoriale",
+          "lieu_adresse": "Base Scoute Territoriale (Île-de-France)",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Toute l'équipe d'animation, Parents volontaires",
+          "statut": "À venir",
+          "description": "Le grand temps fort scout de l'année au niveau du territoire ! Premier week-end complet sous la tente pour beaucoup de Farfadets. Rassemblement de plus de 100 enfants et animateurs. Olympiades géantes des cinq continents, apprentissage de la vie de camp, grande veillée au feu de bois avec contes et légendes du monde, célébration du dimanche matin en pleine forêt et grand banquet partagé avec toutes les familles.",
+          "imaginaire_rencontre": "Phileas Fogg convoque toutes les rondes du territoire au Sommet International des Explorateurs ! Tom et Prune retrouvent les lutins des autres rondes. Ensemble, ils vont ériger le grand campement de la fraternité et prouver que la paix mondiale se construit en vivant et en jouant tous ensemble sous les étoiles.",
+          "objectifs": "1. Découvrir et apprivoiser la vie de camp sous la tente. 2. Partager des activités et grands jeux avec les autres rondes du territoire. 3. Vivre la veillée scoute au feu de camp et la communion dans la nature.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "24/04/2027",
+              "heure_debut": "14:00",
+              "heure_fin": "15:30",
+              "activite": "Arrivée sur la base & Montage du campement sous tente",
+              "animateur": "Parents, Équipe de ronde",
+              "commentaire": "Montage des tentes dômes, aménagement du coin dodo et rangement soigné des sacs à dos.",
+              "materiels": [
+                "Tentes",
+                "Tapis de sol",
+                "Sacs de couchage"
+              ]
+            },
+            {
+              "date": "24/04/2027",
+              "heure_debut": "15:30",
+              "heure_fin": "17:30",
+              "activite": "Les Grandes Olympiades des 5 Continents",
+              "animateur": "Animateurs territoriaux",
+              "commentaire": "Grands jeux inter-rondes : tir à la corde, relais d'agilité, énigmes de coopération géantes.",
+              "materiels": [
+                "Matériel d'olympiades scoutes"
+              ]
+            },
+            {
+              "date": "24/04/2027",
+              "heure_debut": "17:30",
+              "heure_fin": "19:00",
+              "activite": "Temps calme nature & Préparation du repas trappeur",
+              "animateur": "Parents accompagnateurs",
+              "commentaire": "Atelier épluchage de légumes et cuisson collective du dîner au réchaud et feu.",
+              "materiels": [
+                "Gamelles géantes",
+                "Réchauds",
+                "Légumes frais"
+              ]
+            },
+            {
+              "date": "24/04/2027",
+              "heure_debut": "19:00",
+              "heure_fin": "20:30",
+              "activite": "Grand Dîner des Explorateurs sous les arbres",
+              "animateur": "Tous",
+              "commentaire": "Repas chaud partagé dans la joie et la convivialité scoute.",
+              "materiels": [
+                "Gamelles",
+                "Couverts scouts"
+              ]
+            },
+            {
+              "date": "24/04/2027",
+              "heure_debut": "20:30",
+              "heure_fin": "21:30",
+              "activite": "La Grande Veillée du Feu de Camp & Chants d'étoiles",
+              "animateur": "Responsables",
+              "commentaire": "Contes de Tom et Prune au crépitement du feu, chants scouts mimés et prière du soir.",
+              "materiels": [
+                "Feu de camp sécurisé",
+                "Guitare",
+                "Torches"
+              ]
+            },
+            {
+              "date": "24/04/2027",
+              "heure_debut": "21:30",
+              "heure_fin": "22:00",
+              "activite": "Coucher sous la tente des aventuriers",
+              "animateur": "Parents",
+              "commentaire": "Histoires calmes au duvet et extinction des feux sous les tentes.",
+              "materiels": [
+                "Lampes frontales",
+                "Doudous"
+              ]
+            },
+            {
+              "date": "25/04/2027",
+              "heure_debut": "08:00",
+              "heure_fin": "09:30",
+              "activite": "Réveil aux oiseaux & Petit-déjeuner trappeur",
+              "animateur": "Parents",
+              "commentaire": "Chocolat chaud, tartines de confiture, décrassage corporel et toilette de camp.",
+              "materiels": [
+                "Thermos",
+                "Pain frais",
+                "Confiture"
+              ]
+            },
+            {
+              "date": "25/04/2027",
+              "heure_debut": "09:30",
+              "heure_fin": "11:30",
+              "activite": "Grand Atelier Froissartage & Construction en bois",
+              "animateur": "Animateurs",
+              "commentaire": "Assemblage de perches et de ficelle pour créer la passerelle de l'amitié.",
+              "materiels": [
+                "Perches de bois",
+                "Ficelle sisal"
+              ]
+            },
+            {
+              "date": "25/04/2027",
+              "heure_debut": "11:30",
+              "heure_fin": "12:30",
+              "activite": "Célébration scoute en pleine nature",
+              "animateur": "Aumônier, Responsables",
+              "commentaire": "Temps spirituel et chants de louange au milieu des arbres.",
+              "materiels": [
+                "Carnets de chants",
+                "Croix en bois"
+              ]
+            },
+            {
+              "date": "25/04/2027",
+              "heure_debut": "12:30",
+              "heure_fin": "14:30",
+              "activite": "Grand Pique-nique d'accueil des parents",
+              "animateur": "Familles",
+              "commentaire": "Repas festif partagé avec tous les parents venus rejoindre le camp pour le dimanche après-midi.",
+              "materiels": [
+                "Grands buffets partagés"
+              ]
+            },
+            {
+              "date": "25/04/2027",
+              "heure_debut": "14:30",
+              "heure_fin": "16:00",
+              "activite": "Démontage des tentes, Bilan & Grand Cri territorial",
+              "animateur": "Tous",
+              "commentaire": "Rangement soigné, validation du tampon spécial et départ en chantant.",
+              "materiels": [
+                "Tampon territorial",
+                "Passeports Farfadets"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Tentes de campement, piquets et maillets",
+              "qui_amene": "Julien & Ief (Matériel scout)",
+              "photo": "",
+              "remarque": "Pour le campement de la ronde",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Sacs de couchage chauds, duvets et tapis isolants",
+              "qui_amene": "Parents de chaque enfant",
+              "photo": "",
+              "remarque": "Équipement personnel pour la nuit",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Gamelles de camp, réchauds à gaz et jerricans d'eau potable",
+              "qui_amene": "Équipe de ronde",
+              "photo": "",
+              "remarque": "Pour la cuisine de camp",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Ingrédients du dîner chaud et du petit-déjeuner de camp",
+              "qui_amene": "Parents intendants",
+              "photo": "",
+              "remarque": "Alimentation équilibrée de plein air",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Guitare, carnets de chants scouts et torches de veillée",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "Pour la veillée au feu de bois",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Tampon officiel 'Camp Territorial des Explorateurs'",
+              "qui_amene": "Responsable",
+              "photo": "",
+              "remarque": "Pour les passeports de voyage",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 8,
+          "titre": "Escale au Cambodge : Au Cœur de la Cité d'Angkor",
+          "type": "Rencontre ronde",
+          "date": "2027-05-23",
+          "horaire": "10:00 - 15:30",
+          "lieu": "Local Scout & Parc Municipal",
+          "lieu_adresse": "Notre Dame du Val & Parc Municipal, Sartrouville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Sabrina HUE, Lina LIM",
+          "statut": "À venir",
+          "description": "Escale magique en Asie du Sud-Est au milieu des temples mystérieux d'Angkor envahis par la forêt ! Grand jeu coopératif 'Les Bâtisseurs d'Angkor' pour acheminer les blocs sacrés à travers la jungle, atelier créatif de fabrication de marionnettes traditionnelles en carton ajouré (théâtre d'ombres Sbek Thom), dégustation exotique de riz doux au lait de coco et bananes fraîches, et grand spectacle d'ombres derrière la toile rétro-éclairée !",
+          "imaginaire_rencontre": "La montgolfière de Phileas Fogg survole les arbres centenaires et les tours de pierre du Cambodge. Tom et Prune rencontrent Hanuman, le roi des singes farceur, gardien des secrets d'Angkor. Pour continuer le voyage, les Farfadets doivent coopérer pour réveiller les ombres magiques du temple.",
+          "objectifs": "Découvrir la richesse de la culture khmère et le respect de la nature, développer l'agilité manuelle et l'imaginaire avec les marionnettes d'ombres, éveil du goût aux saveurs douces d'Asie.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "23/05/2027",
+              "heure_debut": "10:00",
+              "heure_fin": "10:30",
+              "activite": "Atterrissage dans la jungle d'Angkor",
+              "animateur": "Sabrina HUE, Lina LIM",
+              "commentaire": "Salutation cambodgienne Sampeah (mains jointes), enfilage des écharpes krama et contrôle des passeports.",
+              "materiels": [
+                "Musique khmère traditionnelle",
+                "Passeports Farfadets"
+              ]
+            },
+            {
+              "date": "23/05/2027",
+              "heure_debut": "10:30",
+              "heure_fin": "11:45",
+              "activite": "Le Grand Jeu des Bâtisseurs du Temple d'Angkor",
+              "animateur": "Sabrina HUE",
+              "commentaire": "Parcours d'équilibre et de coopération : transporter les bambous et blocs sacrés à travers la jungle sans toucher le sol marécageux.",
+              "materiels": [
+                "Bambous",
+                "Cordes",
+                "Cartons géants",
+                "Plots d'équilibre"
+              ]
+            },
+            {
+              "date": "23/05/2027",
+              "heure_debut": "11:45",
+              "heure_fin": "12:45",
+              "activite": "Découverte culinaire khmère & Repas asiatique",
+              "animateur": "Lina LIM, Parents",
+              "commentaire": "Pique-nique asiatique : dégustation de riz parfumé au lait de coco, bananes douces, tranches de mangue et chips de manioc douces.",
+              "materiels": [
+                "Riz au lait de coco",
+                "Bananes",
+                "Mangues",
+                "Coupelles bambou"
+              ]
+            },
+            {
+              "date": "23/05/2027",
+              "heure_debut": "12:45",
+              "heure_fin": "13:15",
+              "activite": "Temps calme & Conte du Roi des Singes",
+              "animateur": "Lina LIM",
+              "commentaire": "Légende traditionnelle cambodgienne et étirements doux inspirés des danses sacrées d'Apsara.",
+              "materiels": [
+                "Nattes de paille",
+                "Livre de légendes khmères"
+              ]
+            },
+            {
+              "date": "23/05/2027",
+              "heure_debut": "13:15",
+              "heure_fin": "14:30",
+              "activite": "Atelier Théâtre d'Ombres (Sbek Thom)",
+              "animateur": "Sabrina HUE, Lina LIM",
+              "commentaire": "Création de marionnettes articulées (singes, éléphants, oiseaux) sur carton noir ajouré montées sur baguettes en bois.",
+              "materiels": [
+                "Carton noir épais",
+                "Attaches parisiennes",
+                "Baguettes en bois",
+                "Ciseaux"
+              ]
+            },
+            {
+              "date": "23/05/2027",
+              "heure_debut": "14:30",
+              "heure_fin": "15:15",
+              "activite": "Le Grand Spectacle des Ombres Sacrées",
+              "animateur": "Tous",
+              "commentaire": "Mise en scène d'un spectacle d'ombres projeté derrière un grand drap blanc rétro-éclairé au son du gong.",
+              "materiels": [
+                "Grand drap blanc",
+                "Projecteur puissant",
+                "Marionnettes des enfants"
+              ]
+            },
+            {
+              "date": "23/05/2027",
+              "heure_debut": "15:15",
+              "heure_fin": "15:30",
+              "activite": "Tampon Cambodge & Rassemblement de clôture",
+              "animateur": "Sabrina HUE",
+              "commentaire": "Tamponnage officiel du visa Cambodge sur les passeports et envoi des Farfadets.",
+              "materiels": [
+                "Tampon Cambodge",
+                "Passeports Farfadets"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Déguisements : Écharpes Krama à carreaux & Chapeaux coniques",
+              "qui_amene": "Lina",
+              "photo": "",
+              "remarque": "Costumes traditionnels khmers",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Grand drap blanc & Projecteur ou lampe torche puissante",
+              "qui_amene": "Sabrina",
+              "photo": "",
+              "remarque": "Pour l'écran du théâtre d'ombres",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Cartons noirs rigides, attaches parisiennes et baguettes en bois",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Pour confectionner les marionnettes",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Riz au lait de coco, bananes, mangues et chips de manioc",
+              "qui_amene": "Lina",
+              "photo": "",
+              "remarque": "Buffet culinaire d'Asie du Sud-Est",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Perches de bambou et cordages",
+              "qui_amene": "Sabrina",
+              "photo": "",
+              "remarque": "Pour le jeu des bâtisseurs d'Angkor",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Tampon encreur officiel 'Visa Cambodge - Angkor'",
+              "qui_amene": "Responsable",
+              "photo": "",
+              "remarque": "Pour les passeports de voyage",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 9,
+          "titre": "Clôture du Tour du Monde en 80 Jours : Le Pari Gagné de Phileas Fogg !",
+          "type": "Rencontre ronde",
+          "date": "2027-06-13",
+          "horaire": "10:00 - 16:00",
+          "lieu": "Local Scout & Parc boisé",
+          "lieu_adresse": "Notre Dame du Val & Parc boisé, Sartrouville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Justine MICHEL, Ief BERBEN, Nabil ELABBADI",
+          "statut": "À venir",
+          "description": "L'apothéose et la clôture officielle du Tour du Monde en 80 Jours ! Phileas Fogg, Tom et Prune bouclent leur périple extraordinaire autour de la planète. Grand jeu de piste récapitulatif 'Le Défi Chrono des 80 Jours' réunissant les énigmes de toutes les escales de l'année (France, Maroc, Bethléem, Portugal, Belgique, Cambodge), grand banquet de gala du Reform Club célébrant la victoire du pari, vérification de tous les passeports tamponnés et remise solennelle des Diplômes d'Explorateurs du Monde à chaque Farfadet. Présentation festive du Grand Camp d'Été inter-rondes de juillet !",
+          "imaginaire_rencontre": "Les cloches de Big Ben sonnent à toute volée : le pari de Phileas Fogg est gagné en 80 jours pile ! Grâce au courage, à la curiosité et à la bienveillance des Farfadets de Sartrouville, la malle aux trésors est comble de souvenirs inoubliables. Tom et Prune ouvrent le grand bal des explorateurs pour fêter la victoire de l'amitié autour du globe !",
+          "objectifs": "1. Clôturer l'épopée annuelle du Tour du Monde et valoriser les progrès de chaque enfant. 2. Vérifier et compléter les passeports de voyage avec le grand visa doré d'accomplissement. 3. Fêter ensemble la fin de l'année scoute avec les familles et introduire la perspective du grand camp d'été.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "13/06/2027",
+              "heure_debut": "10:00",
+              "heure_fin": "10:30",
+              "activite": "L'Arrivée Triomphale de la Montgolfière à Londres",
+              "animateur": "Justine MICHEL, Ief BERBEN, Nabil ELABBADI",
+              "commentaire": "Rassemblement joyeux, accueil de Phileas Fogg en habit de gala, cri de ronde victorieux et inspection des boussoles.",
+              "materiels": [
+                "Chapeaux hauts-de-forme",
+                "Passeports Farfadets"
+              ]
+            },
+            {
+              "date": "13/06/2027",
+              "heure_debut": "10:30",
+              "heure_fin": "12:00",
+              "activite": "Le Grand Défi Chrono des 80 Jours en Forêt",
+              "animateur": "Ief BERBEN, Nabil ELABBADI",
+              "commentaire": "Grand jeu de piste de clôture : 6 ateliers défis en forêt rappelant chaque pays visité pour déverrouiller la dernière serrure de la malle aux trésors.",
+              "materiels": [
+                "Balises des pays",
+                "Cartes d'énigmes",
+                "Malle de ronde"
+              ]
+            },
+            {
+              "date": "13/06/2027",
+              "heure_debut": "12:00",
+              "heure_fin": "13:30",
+              "activite": "Le Grand Banquet des Explorateurs du Reform Club",
+              "animateur": "Parents",
+              "commentaire": "Pique-nique de fête partagé : toasts, tartes salées, buffet des spécialités de l'année et jus pétillants.",
+              "materiels": [
+                "Nappes de gala",
+                "Buffet festif partagé"
+              ]
+            },
+            {
+              "date": "13/06/2027",
+              "heure_debut": "13:30",
+              "heure_fin": "14:15",
+              "activite": "Rétrospective en saynètes : Nos Meilleurs Souvenirs du Monde",
+              "animateur": "Justine MICHEL",
+              "commentaire": "Chaque sizaine rejoue son escale préférée avec humour et tendresse au son des chants de ronde.",
+              "materiels": [
+                "Accessoires des escales",
+                "Carnet de chants"
+              ]
+            },
+            {
+              "date": "13/06/2027",
+              "heure_debut": "14:15",
+              "heure_fin": "15:15",
+              "activite": "CÉRÉMONIE OFFICIELLE DE CLÔTURE & Remise des Diplômes",
+              "animateur": "Justine MICHEL, Ief BERBEN, Nabil ELABBADI",
+              "commentaire": "Contrôle des passeports remplis, apposition du grand sceau d'or de Phileas Fogg et remise solennelle du Diplôme d'Explorateur du Monde à chaque enfant.",
+              "materiels": [
+                "Diplômes officiels imprimés",
+                "Sceau d'or Phileas Fogg"
+              ]
+            },
+            {
+              "date": "13/06/2027",
+              "heure_debut": "15:15",
+              "heure_fin": "15:45",
+              "activite": "L'Annonce du Grand Camp d'Été & Premiers indices",
+              "animateur": "Ief BERBEN, Julien DUBOIS",
+              "commentaire": "Présentation de la grande aventure sous tente de juillet et des rencontres à venir avec les autres groupes Farfadets d'autres villes.",
+              "materiels": [
+                "Banderole du camp d'été"
+              ]
+            },
+            {
+              "date": "13/06/2027",
+              "heure_debut": "15:45",
+              "heure_fin": "16:00",
+              "activite": "Grand Goûter de Gala & Chant des Adieux provisoire",
+              "animateur": "Tous",
+              "commentaire": "Gâteaux de fête, photos de groupe de toute la ronde et dispersion.",
+              "materiels": [
+                "Gâteaux de gala",
+                "Boissons festives"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Déguisements de gala : Chapeaux hauts-de-forme, gilets & Tenues de fête",
+              "qui_amene": "Justine & Parents",
+              "photo": "",
+              "remarque": "Pour célébrer la victoire du pari à Londres",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Diplômes officiels d'Explorateur du Tour du Monde en 80 Jours",
+              "qui_amene": "Julien (Responsable)",
+              "photo": "",
+              "remarque": "Imprimés et personnalisés au prénom de chaque enfant",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Grand sceau / tampon encreur doré 'Tour du Monde Accompli !'",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "Dernier tampon officiel du passeport",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Balises et accessoires du jeu de piste récapitulatif",
+              "qui_amene": "Nabil",
+              "photo": "",
+              "remarque": "Pour le grand jeu des 80 jours",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Grand buffet festif et gâteaux de gala",
+              "qui_amene": "Parents",
+              "photo": "",
+              "remarque": "Pour le grand banquet du Reform Club",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
+        },
+        {
+          "id": 10,
+          "titre": "Grand Camp d'Été : Le Grand Rassemblement Inter-Rondes en Pleine Nature",
+          "type": "Week-end de ronde",
+          "date": "2027-07-02",
+          "horaire": "Du 2 au 5 juillet (4 jours sous la tente)",
+          "lieu": "Base Nature & Camp Scout de Plein Air",
+          "lieu_adresse": "Base Nature Scoute (Camp d'été)",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Julien DUBOIS, Ief BERBEN, Parents accompagnateurs",
+          "statut": "À venir",
+          "description": "La grande aventure d'été sous la tente ! Pendant 4 jours en pleine nature, les Farfadets de Sartrouville rejoignent d'autres rondes Farfadets venues d'autres villes et territoires pour un grand camp partagé sous un tout nouvel imaginaire. Au programme : découverte de la vie en camp scout (montage des tentes, cuisine trappeur au feu de bois, vaisselle au grand air), grands jeux d'amitié inter-groupes, veillées communes aux flambeaux avec chants et guitares, olympiades nature, et cérémonie émouvante de passage des Farfadets 2ème année vers la Peuplade des Louveteaux-Jeannettes !",
+          "imaginaire_rencontre": "Un tout nouvel imaginaire de camp (en cours de création avec les enfants et les autres rondes) ouvrira les portes d'un univers inédit où plusieurs groupes de différentes villes s'uniront pour vivre une formidable aventure collective en forêt !",
+          "objectifs": "1. Vivre l'expérience fondatrice du camp scout de 4 jours sous la tente en autonomie et en fraternité. 2. Rencontrer, échanger et faire alliance avec d'autres rondes Farfadets d'autres villes. 3. Célébrer la fin de la saison et accompagner le passage des 2èmes années vers les Louveteaux-Jeannettes.",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "02/07/2027",
+              "heure_debut": "10:00",
+              "heure_fin": "13:00",
+              "activite": "Arrivée sur la base & Accueil des Rondes des Autres Villes",
+              "animateur": "Julien DUBOIS, Ief BERBEN, Parents",
+              "commentaire": "Accueil chaleureux et fraternel avec les enfants et chefs des autres groupes, découverte des lieux et attribution des campements.",
+              "materiels": [
+                "Tentes de patrouille",
+                "Outils de camp"
+              ]
+            },
+            {
+              "date": "02/07/2027",
+              "heure_debut": "13:00",
+              "heure_fin": "15:30",
+              "activite": "Montage du Grand Village de Tentes & Aménagements",
+              "animateur": "Parents, Responsables",
+              "commentaire": "Montage collectif des tentes sous les arbres, installation des tapis de sol, coin dodo et mât des couleurs commun.",
+              "materiels": [
+                "Tentes",
+                "Maillets",
+                "Sardines"
+              ]
+            },
+            {
+              "date": "02/07/2027",
+              "heure_debut": "15:30",
+              "heure_fin": "18:00",
+              "activite": "Le Grand Jeu Brise-Glace Inter-Groupes",
+              "animateur": "Animateurs inter-rondes",
+              "commentaire": "Grands jeux pour faire connaissance entre enfants de différentes villes, tisser les premières amitiés et former les équipes mixtes.",
+              "materiels": [
+                "Foulards de jeu",
+                "Balles",
+                "Cordes"
+              ]
+            },
+            {
+              "date": "02/07/2027",
+              "heure_debut": "18:30",
+              "heure_fin": "20:30",
+              "activite": "Préparation du Dîner Trappeur & Premier Repas de Camp",
+              "animateur": "Parents",
+              "commentaire": "Cuisine collective au réchaud et feu de bois, vaisselle scoute au grand air dans la bonne humeur.",
+              "materiels": [
+                "Gamelles géantes",
+                "Réchauds"
+              ]
+            },
+            {
+              "date": "02/07/2027",
+              "heure_debut": "20:30",
+              "heure_fin": "22:00",
+              "activite": "Grande Veillée Commune d'Ouverture du Camp aux Flambeaux",
+              "animateur": "Tous",
+              "commentaire": "Lancement du nouvel imaginaire de camp, chants scouts partagés autour du grand feu de camp et prière du soir.",
+              "materiels": [
+                "Feu de camp",
+                "Guitares",
+                "Torches"
+              ]
+            },
+            {
+              "date": "03/07/2027",
+              "heure_debut": "09:00",
+              "heure_fin": "12:30",
+              "activite": "Le Grand Jeu d'Aventure en Forêt : L'Alliance des Villes",
+              "animateur": "Animateurs",
+              "commentaire": "Grand jeu de piste par équipes mélangées : énigmes de coopération, parcours d'agilité et construction d'abris en sous-bois.",
+              "materiels": [
+                "Cartes de forêt",
+                "Balises",
+                "Boussoles"
+              ]
+            },
+            {
+              "date": "03/07/2027",
+              "heure_debut": "12:30",
+              "heure_fin": "14:00",
+              "activite": "Grand Pique-nique Champêtre sous les Chênes",
+              "animateur": "Parents",
+              "commentaire": "Repas froid équilibré et partagé au cœur de la forêt.",
+              "materiels": [
+                "Nappes de pique-nique"
+              ]
+            },
+            {
+              "date": "03/07/2027",
+              "heure_debut": "14:00",
+              "heure_fin": "18:00",
+              "activite": "Ateliers Froissartage & Olympiades Nature",
+              "animateur": "Parents, Responsables",
+              "commentaire": "Construction de ponts en perches de bois, jeux d'adresse et relais de camp.",
+              "materiels": [
+                "Perches de bois",
+                "Ficelle sisal"
+              ]
+            },
+            {
+              "date": "03/07/2027",
+              "heure_debut": "19:30",
+              "heure_fin": "22:00",
+              "activite": "La Grande Veillée du Feu de Camp & Concours de Saynètes",
+              "animateur": "Tous",
+              "commentaire": "Spectacles humoristiques créés par chaque tente, bans scouts et contes d'étoiles.",
+              "materiels": [
+                "Feu de camp",
+                "Déguisements de camp"
+              ]
+            },
+            {
+              "date": "04/07/2027",
+              "heure_debut": "09:30",
+              "heure_fin": "11:30",
+              "activite": "Randonnée Découverte & Célébration de la Création",
+              "animateur": "Aumônier, Responsables",
+              "commentaire": "Balade sensorielle pour observer les merveilles de la forêt et temps spirituel de communion.",
+              "materiels": [
+                "Carnets de chants",
+                "Éléments naturels"
+              ]
+            },
+            {
+              "date": "04/07/2027",
+              "heure_debut": "12:00",
+              "heure_fin": "14:00",
+              "activite": "Grand Déjeuner de Camp & Repos des Aventuriers",
+              "animateur": "Parents",
+              "commentaire": "Repas chaud et sieste calme à l'ombre des tentes.",
+              "materiels": [
+                "Tapis de sol"
+              ]
+            },
+            {
+              "date": "04/07/2027",
+              "heure_debut": "14:00",
+              "heure_fin": "18:00",
+              "activite": "Grands Jeux d'Eau & Préparation de la Fête des Familles",
+              "animateur": "Animateurs",
+              "commentaire": "Jeux d'eau rafraîchissants et répétition du cérémonial des 2èmes années.",
+              "materiels": [
+                "Bassines d'eau",
+                "Éponges"
+              ]
+            },
+            {
+              "date": "04/07/2027",
+              "heure_debut": "19:30",
+              "heure_fin": "21:30",
+              "activite": "Veillée des Promesses & Conte des Étoiles",
+              "animateur": "Julien DUBOIS, Ief BERBEN",
+              "commentaire": "Veillée intime et émouvante autour de ce que chacun a vécu et appris pendant cette année.",
+              "materiels": [
+                "Bougies LED",
+                "Bâton de parole"
+              ]
+            },
+            {
+              "date": "05/07/2027",
+              "heure_debut": "09:30",
+              "heure_fin": "12:00",
+              "activite": "Accueil des Familles & Grand Banquet Inter-Groupes",
+              "animateur": "Tous",
+              "commentaire": "Arrivée des parents de toutes les villes, grand repas de fête partagé entre toutes les familles.",
+              "materiels": [
+                "Grand buffet de camp"
+              ]
+            },
+            {
+              "date": "05/07/2027",
+              "heure_debut": "12:00",
+              "heure_fin": "14:30",
+              "activite": "CÉRÉMONIE SOLENNELLE DE PASSAGE DES 2ÈMES ANNÉES",
+              "animateur": "Responsables, Chefs Louveteaux",
+              "commentaire": "Cérémonie officielle : passage symbolique des Farfadets 2ème année vers la Peuplade des Louveteaux-Jeannettes (8-11 ans) et remise des insignes.",
+              "materiels": [
+                "Insignes de passage",
+                "Foulards de meute"
+              ]
+            },
+            {
+              "date": "05/07/2027",
+              "heure_debut": "14:30",
+              "heure_fin": "16:00",
+              "activite": "Démontage Soigné, Chant des Adieux & Dispersion",
+              "animateur": "Tous",
+              "commentaire": "Rangement du lieu de camp sans laisser de traces, cercle final des adieux et départ.",
+              "materiels": [
+                "Sacs à dos",
+                "Chant des adieux"
+              ]
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Tentes de patrouille et tentes dômes pour 4 jours de camp",
+              "qui_amene": "Julien & Ief (Matériel groupe)",
+              "photo": "",
+              "remarque": "Hébergement complet de campement",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Malles de cuisine scoute, réchauds, faitouts et bidons d'eau",
+              "qui_amene": "Intendance de camp",
+              "photo": "",
+              "remarque": "Pour cuisiner tous les repas en autonomie",
+              "ok": false
+            },
+            {
+              "id": 3,
+              "nom": "Sacs de couchage chauds, tapis de sol isolants et lampes frontales",
+              "qui_amene": "Parents de chaque enfant",
+              "photo": "",
+              "remarque": "Équipement individuel pour la nuit sous tente",
+              "ok": false
+            },
+            {
+              "id": 4,
+              "nom": "Foulards et insignes de passage vers les Louveteaux-Jeannettes",
+              "qui_amene": "Responsables",
+              "photo": "",
+              "remarque": "Pour la cérémonie solennelle des 2èmes années",
+              "ok": false
+            },
+            {
+              "id": 5,
+              "nom": "Matériel d'olympiades inter-groupes, perches en bois et cordes",
+              "qui_amene": "Ief",
+              "photo": "",
+              "remarque": "Pour les grands jeux avec les autres rondes",
+              "ok": false
+            },
+            {
+              "id": 6,
+              "nom": "Guitares et carnets de chants scouts pour les veillées communes",
+              "qui_amene": "Animateurs",
+              "photo": "",
+              "remarque": "Pour animer les veillées au feu de bois",
+              "ok": false
+            }
+          ],
+          "compte_rendu": ""
         }
       ],
-      "imaginaire": "Bienvenue au village des Farfadets ! Cette année, Tom et Lou nous guident à travers la forêt enchantée pour retrouver les cinq pierres de la bienveillance : la Confiance, l'Entraide, la Curiosité, la Joie et le Respect de la Création.",
-      "imaginaire_titre": "L'Aventure des Farfadets : Les Pierres de Bienveillance",
+      "imaginaire": "### 🧭 L'Aventure de l'Année : Le Tour du Monde en 80 Jours !\n\nUn après-midi au local scout de Sartrouville, **Tom et Prune**, nos deux lutins Farfadets farceurs et gardiens de la malle aux trésors, font une découverte extraordinaire. Au fond de la malle, sous les foulards et les boussoles, repose un vieux carnet de cuir gravé aux initiales d'un illustre voyageur : **Phileas Fogg** !\n\nAccompagné de son fidèle ami Passepartout, le célèbre explorateur gentleman a fait un pari audacieux : **accomplir le tour du globe en 80 jours** et rapporter les plus précieux trésors de l'humanité. Mais pour réussir cette immense aventure, il a besoin de véritables explorateurs au grand cœur : **les Farfadets de la 3ème Sartrouville** !\n\nTout au long de l'année, guidés par Tom, Prune et Phileas Fogg, les enfants vont embarquer dans une montgolfière imaginaire, franchir mers et continents, et faire escale dans des contrées fascinantes :\n* 🇫🇷 **29 novembre 2026 - Le Grand Départ de France** : L'envol de la montgolfière et la découverte de nos régions françaises (terroirs, gastronomie, contes et jeux traditionnels).\n* 🕊️ **13 décembre 2026 - Escale de la Paix & Lumière de Bethléem** : La grande Bonne Action scoute et le partage de la chaleur et des sourires auprès des aînés.\n* 🇲🇦 **17 janvier 2027 - Escale au Maroc** : Les trésors de l'Atlas, la caravane du désert, l'art des zelliges et la cérémonie du thé à la menthe doux.\n* 🇵🇹 **28 février 2027 - Escale au Portugal** : Le port des grands navigateurs, les caravelles atlantiques, l'orientation boussole, les azulejos et les pasteis de nata.\n* 🇧🇪 **21 mars 2027 - Escale en Belgique** : Le royaume des détectives et de la bande dessinée (style Tintin), grand jeu d'enquête en forêt, gaufres liégeoises et chocolat.\n* ⛺ **24 & 25 avril 2027 - Camp Territorial** : Le grand sommet international sous la tente avec toutes les rondes Farfadets du territoire.\n* 🇰🇭 **23 mai 2027 - Escale au Cambodge** : Au cœur de la cité sacrée d'Angkor, les bâtisseurs de temples et le grand théâtre d'ombres Sbek Thom.\n* 🏆 **13 juin 2027 - Clôture du Tour du Monde en 80 Jours** : L'arrivée triomphale à Londres, la célébration du pari gagné, le grand banquet du Reform Club et la remise des diplômes d'explorateurs !\n* ⛺ **2 au 5 juillet 2027 - Le Grand Camp d'Été** : Une aventure inédite en pleine nature sous un tout nouvel imaginaire de camp, à la rencontre d'autres groupes Farfadets venus d'autres villes !\n\n#### 🎒 Les 5 Piliers de chaque Escale :\n1. 🛂 **Le Passeport Farfadet** : Chaque enfant possède son passeport d'explorateur tamponné d'un visa officiel à chaque pays traversé.\n2. 🍲 **La Découverte Culinaire** : Des saveurs, épices douces et spécialités traditionnelles cuisinées ou dégustées ensemble.\n3. 🎭 **Les Déguisements & Traditions** : Tenues typiques, coiffes et accessoires pour plonger dans l'ambiance locale.\n4. 🏃 **Les Grands Jeux & Défis Coopératifs** : Jeux traditionnels du pays stimulant les 6 Grandir (agilité, esprit d'équipe, écoute, créativité, cœur et spiritualité).\n5. 🤝 **L'Esprit Scout & La Bonne Action** : Bienveillance, respect de la Création et ouverture généreuse sur le monde.\n",
+      "imaginaire_titre": "🌍 Le Tour du Monde en 80 Jours avec Phileas Fogg, Tom & Prune",
       "imaginaire_photos": [],
       "supports": [
         {
@@ -300,6 +2023,71 @@
           "categorie": "Animation",
           "desc": "Idées d'ateliers manuels et de jeux en plein air"
         }
+      ],
+      "progressions": [
+        {
+          "id": 1,
+          "enfant_id": 11,
+          "enfant_nom": "Kaila DUBOIS",
+          "grandir": "🤝 Grandir avec les autres",
+          "note": 9,
+          "date_reussite": "2026-11-08",
+          "commentaire": "Très active dans le jeu brise-glace de la pelote de laine et bon accueil des nouveaux."
+        },
+        {
+          "id": 2,
+          "enfant_id": 10,
+          "enfant_nom": "Aedan BERBEN",
+          "grandir": "🏃 Grandir avec son corps",
+          "note": 8,
+          "date_reussite": "2026-11-08",
+          "commentaire": "A bien réussi l'épreuve de motricité de la rivière tumultueuse."
+        },
+        {
+          "id": 3,
+          "enfant_id": 14,
+          "enfant_nom": "Maxence HUE",
+          "grandir": "🎨 Grandir avec ses mains et sa tête",
+          "note": 9,
+          "date_reussite": "2026-11-08",
+          "commentaire": "Superbe participation à la confection de la fresque et décoration de la charte."
+        },
+        {
+          "id": 4,
+          "enfant_id": 12,
+          "enfant_nom": "Feriel ELABBADI",
+          "grandir": "❤️ Grandir avec son cœur",
+          "note": 8,
+          "date_reussite": "2026-11-08",
+          "commentaire": "Belle expression des émotions sur l'arc-en-ciel des farfadets."
+        },
+        {
+          "id": 5,
+          "enfant_id": 13,
+          "enfant_nom": "Lenny GNANAPIRAGASAM",
+          "grandir": "🦉 Grandir avec sagesse",
+          "note": 8,
+          "date_reussite": "2026-11-08",
+          "commentaire": "Très à l'écoute pendant le temps calme et le bâton de parole."
+        },
+        {
+          "id": 6,
+          "enfant_id": 15,
+          "enfant_nom": "Olivier TRAN",
+          "grandir": "🤝 Grandir avec les autres",
+          "note": 8,
+          "date_reussite": "2026-11-08",
+          "commentaire": "A aidé à ranger la malle et partagé son goûter."
+        },
+        {
+          "id": 7,
+          "enfant_id": 16,
+          "enfant_nom": "Anna Rose MESEGUER",
+          "grandir": "🕊️ Grandir avec Jésus",
+          "note": 9,
+          "date_reussite": "2026-11-08",
+          "commentaire": "Émerveillement lors du temps nature et photolangage."
+        }
       ]
     },
     {
@@ -316,7 +2104,9 @@
           "nom": "DUBOIS",
           "role": "Responsable",
           "contact": "06 88 12 04 20",
-          "photo": "JD"
+          "photo": "JD",
+          "parents_ids": [],
+          "enfants_ids": []
         },
         {
           "id": 2,
@@ -324,7 +2114,9 @@
           "nom": "MOREAU",
           "role": "Responsable",
           "contact": "claire@sgdf.fr",
-          "photo": "CM"
+          "photo": "CM",
+          "parents_ids": [],
+          "enfants_ids": []
         },
         {
           "id": 3,
@@ -332,7 +2124,11 @@
           "nom": "PETIT",
           "role": "Parent",
           "contact": "marc@email.fr",
-          "photo": "MP"
+          "photo": "MP",
+          "parents_ids": [],
+          "enfants_ids": [
+            4
+          ]
         },
         {
           "id": 4,
@@ -340,7 +2136,11 @@
           "nom": "PETIT",
           "role": "Enfant",
           "contact": "06 11 22 33 44",
-          "photo": "LP"
+          "photo": "LP",
+          "parents_ids": [
+            3
+          ],
+          "enfants_ids": []
         }
       ],
       "rencontres": [
@@ -379,15 +2179,18 @@
               "id": 1,
               "nom": "Foulards",
               "qui_amene": "Claire MOREAU",
-              "photo": ""
+              "photo": "",
+              "ok": false
             }
-          ]
+          ],
+          "compte_rendu": ""
         }
       ],
       "imaginaire": "Bienvenue au village des Farfadets !",
       "imaginaire_titre": "L'Aventure des Farfadets",
       "imaginaire_photos": [],
-      "supports": []
+      "supports": [],
+      "progressions": []
     }
   ],
   "utilisateurs": [
@@ -395,7 +2198,7 @@
       "id": 1,
       "prenom": "Julien",
       "nom": "DUBOIS",
-      "email": "julien.dubois@sgdf.fr",
+      "email": "juliend2",
       "mot_de_passe": "9580218ab9e8ca55b7ba4ad97c5222bde0f38ded42afb7c69941158080550473",
       "role": "admin",
       "membre_id": 1,
@@ -408,23 +2211,34 @@
       "id": 2,
       "prenom": "Ief",
       "nom": "BERBEN",
-      "email": "ief.berben@sgdf.fr",
+      "email": "ief",
       "mot_de_passe": "scout123",
-      "role": "responsable",
+      "role": "admin",
       "membre_id": 2,
       "rondes_autorisees": [
-        1,
-        2
+        1
       ]
     },
     {
       "id": 3,
       "prenom": "NABIL",
       "nom": "ELABBADI",
-      "email": "nabil.elabbadi@email.fr",
+      "email": "nabil",
       "mot_de_passe": "scout123",
       "role": "parent",
-      "membre_id": 3,
+      "membre_id": 12,
+      "rondes_autorisees": [
+        1
+      ]
+    },
+    {
+      "id": 4,
+      "prenom": "SABRINA",
+      "nom": "HUE",
+      "email": "sabrina",
+      "mot_de_passe": "9580218ab9e8ca55b7ba4ad97c5222bde0f38ded42afb7c69941158080550473",
+      "role": "parent",
+      "membre_id": 6,
       "rondes_autorisees": [
         1
       ]
