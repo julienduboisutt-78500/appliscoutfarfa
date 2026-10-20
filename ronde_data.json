@@ -2024,71 +2024,7 @@
           "desc": "Idées d'ateliers manuels et de jeux en plein air"
         }
       ],
-      "progressions": [
-        {
-          "id": 1,
-          "enfant_id": 11,
-          "enfant_nom": "Kaila DUBOIS",
-          "grandir": "🤝 Grandir avec les autres",
-          "note": 9,
-          "date_reussite": "2026-11-08",
-          "commentaire": "Très active dans le jeu brise-glace de la pelote de laine et bon accueil des nouveaux."
-        },
-        {
-          "id": 2,
-          "enfant_id": 10,
-          "enfant_nom": "Aedan BERBEN",
-          "grandir": "🏃 Grandir avec son corps",
-          "note": 8,
-          "date_reussite": "2026-11-08",
-          "commentaire": "A bien réussi l'épreuve de motricité de la rivière tumultueuse."
-        },
-        {
-          "id": 3,
-          "enfant_id": 14,
-          "enfant_nom": "Maxence HUE",
-          "grandir": "🎨 Grandir avec ses mains et sa tête",
-          "note": 9,
-          "date_reussite": "2026-11-08",
-          "commentaire": "Superbe participation à la confection de la fresque et décoration de la charte."
-        },
-        {
-          "id": 4,
-          "enfant_id": 12,
-          "enfant_nom": "Feriel ELABBADI",
-          "grandir": "❤️ Grandir avec son cœur",
-          "note": 8,
-          "date_reussite": "2026-11-08",
-          "commentaire": "Belle expression des émotions sur l'arc-en-ciel des farfadets."
-        },
-        {
-          "id": 5,
-          "enfant_id": 13,
-          "enfant_nom": "Lenny GNANAPIRAGASAM",
-          "grandir": "🦉 Grandir avec sagesse",
-          "note": 8,
-          "date_reussite": "2026-11-08",
-          "commentaire": "Très à l'écoute pendant le temps calme et le bâton de parole."
-        },
-        {
-          "id": 6,
-          "enfant_id": 15,
-          "enfant_nom": "Olivier TRAN",
-          "grandir": "🤝 Grandir avec les autres",
-          "note": 8,
-          "date_reussite": "2026-11-08",
-          "commentaire": "A aidé à ranger la malle et partagé son goûter."
-        },
-        {
-          "id": 7,
-          "enfant_id": 16,
-          "enfant_nom": "Anna Rose MESEGUER",
-          "grandir": "🕊️ Grandir avec Jésus",
-          "note": 9,
-          "date_reussite": "2026-11-08",
-          "commentaire": "Émerveillement lors du temps nature et photolangage."
-        }
-      ]
+      "progressions": []
     },
     {
       "id": 2,
@@ -2205,7 +2141,8 @@
       "rondes_autorisees": [
         1,
         2
-      ]
+      ],
+      "membre_ronde_id": 1
     },
     {
       "id": 2,
@@ -2217,7 +2154,8 @@
       "membre_id": 2,
       "rondes_autorisees": [
         1
-      ]
+      ],
+      "membre_ronde_id": 1
     },
     {
       "id": 3,
@@ -2226,10 +2164,11 @@
       "email": "nabil",
       "mot_de_passe": "scout123",
       "role": "parent",
-      "membre_id": 12,
+      "membre_id": 3,
       "rondes_autorisees": [
         1
-      ]
+      ],
+      "membre_ronde_id": 1
     },
     {
       "id": 4,
@@ -2241,7 +2180,21 @@
       "membre_id": 6,
       "rondes_autorisees": [
         1
-      ]
+      ],
+      "membre_ronde_id": 1
+    },
+    {
+      "id": 5,
+      "prenom": "JENINORBERT",
+      "nom": "GNANAPIRAGASAM",
+      "email": "jeni",
+      "mot_de_passe": "9580218ab9e8ca55b7ba4ad97c5222bde0f38ded42afb7c69941158080550473",
+      "role": "parent",
+      "membre_id": 4,
+      "rondes_autorisees": [
+        1
+      ],
+      "membre_ronde_id": 1
     }
   ],
   "google_sheet_url": "https://docs.google.com/spreadsheets/d/1yfVu4WgO21PWUzla9-SNTwnC7ZrZfp-K/edit?usp=drive_link&ouid=100161899100847525946&rtpof=true&sd=true"

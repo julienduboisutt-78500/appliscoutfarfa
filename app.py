@@ -43,7 +43,7 @@ def verify_password(input_pwd: str, stored_hash: str) -> bool:
 # FONCTIONS UTILITAIRES DE DATE ET FICHIERS
 # =============================================================
 def format_date_fr(d_str):
-    if not d_str:
+    if not d_str or str(d_str).strip() in ("", "None", "nan"):
         return ""
     d_clean = str(d_str).strip()
     if "/" in d_clean:
@@ -55,6 +55,8 @@ def format_date_fr(d_str):
         return d_clean
 
 def parse_date_to_iso(d_input):
+    if not d_input or str(d_input).strip() in ("", "None", "nan"):
+        return ""
     if isinstance(d_input, (date, datetime)):
         return d_input.strftime("%Y-%m-%d")
     d_clean = str(d_input).strip()
@@ -66,9 +68,11 @@ def parse_date_to_iso(d_input):
             return d_clean
     return d_clean
 
-def parse_date_obj(d_input):
-    if isinstance(d_input, date):
-        return d_input
+def parse_date_obj(d_input, default_today=True):
+    if not d_input or str(d_input).strip() in ("", "None", "nan"):
+        return date.today() if default_today else None
+    if isinstance(d_input, (date, datetime)):
+        return d_input if isinstance(d_input, date) else d_input.date()
     d_clean = str(d_input).strip()
     if "/" in d_clean:
         try:
@@ -78,7 +82,7 @@ def parse_date_obj(d_input):
     try:
         return datetime.strptime(d_clean, "%Y-%m-%d").date()
     except Exception:
-        return date.today()
+        return date.today() if default_today else None
 
 def file_to_base64(uploaded_file):
     if uploaded_file is not None:
@@ -2886,7 +2890,7 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
     # 2. SUIVI DE LA PROGRESSION DES FARFADETS (LES GRANDIR)
     with tab_progression:
         st.subheader("🌟 Suivi Pédagogique de la Progression : Les 6 Grandir")
-        st.caption("Dans la branche Farfadets (6-8 ans), chaque enfant chemine à son rythme à travers six axes de développement fondamentaux appelés les « Grandir ». Vous pouvez ici enregistrer chaque étape réussie, la noter sur 10, fixer la date de validation et observer l'évolution de la ronde.")
+        st.caption("Dans la branche Farfadets (6-8 ans), chaque enfant chemine à son rythme à travers six axes de développement fondamentaux appelés les « Grandir ». Vous pouvez ici enregistrer le suivi progression de chaque étape sur 10, renseigner la date de validation (optionnelle) et observer l'évolution de la ronde.")
 
         prog_list = current_ronde.setdefault("progressions", [])
 
@@ -2900,7 +2904,7 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                 st.metric("Total des Grandir validés", len(prog_list))
             with k3:
                 moy_note = round(sum(p.get("note", 0) for p in prog_list) / max(len(prog_list), 1), 1) if prog_list else 0.0
-                st.metric("Note moyenne de progression", f"{moy_note} / 10" if prog_list else "-")
+                st.metric("Moyenne du suivi progression", f"{moy_note} / 10" if prog_list else "-")
 
             st.markdown("---")
             st.markdown("#### 👤 Fiche individuelle d'un Farfadet")
@@ -2921,14 +2925,16 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                     val = enf_progs.get(g_name)
                     if val:
                         note = val.get("note", 10)
-                        d_reussite = format_date_fr(val.get("date_reussite", ""))
+                        d_reussite_raw = val.get("date_reussite", "")
+                        d_reussite = format_date_fr(d_reussite_raw)
+                        val_date_html = f'<div style="font-size:11.5px; color:#166534; margin-top:2px;">✅ Validé le <b>{d_reussite}</b></div>' if d_reussite else '<div style="font-size:11.5px; color:#166534; margin-top:2px;">✅ Validé</div>'
                         com = val.get("commentaire", "")
                         stars = "⭐" * max(1, min(int(round(note / 2)), 5))
                         st.markdown(f"""
                             <div style="background:#F0FDF4; border:1px solid #86EFAC; border-radius:10px; padding:12px; margin-bottom:10px; min-height:130px;">
                                 <div style="font-weight:700; color:#166534; font-size:13.5px;">{g_name}</div>
-                                <div style="font-size:18px; font-weight:800; color:#15803D; margin-top:4px;">{note} / 10 <span style="font-size:13px;">{stars}</span></div>
-                                <div style="font-size:11.5px; color:#166534; margin-top:2px;">✅ Validé le <b>{d_reussite}</b></div>
+                                <div style="font-size:16px; font-weight:800; color:#15803D; margin-top:4px;">Suivi progression : {note} / 10 <span style="font-size:13px;">{stars}</span></div>
+                                {val_date_html}
                                 <div style="font-size:12px; color:#334155; margin-top:6px; font-style:italic;">{com if com else "Aucun commentaire"}</div>
                             </div>
                         """, unsafe_allow_html=True)
@@ -2944,23 +2950,24 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
             # FORMULAIRE POUR VALIDER OU METTRE À JOUR UN GRANDIR
             if is_responsable_or_admin():
                 st.markdown("---")
-                with st.expander(f"➕ Noter ou valider un Grandir pour **{enfant_names_map.get(sel_enf_id)}**"):
+                with st.expander(f"➕ Suivi progression d'un Grandir pour **{enfant_names_map.get(sel_enf_id)}**"):
                     with st.form(f"form_note_grandir_{sel_enf_id}"):
-                        g_choix = st.selectbox("Grandir à valider / noter :", GRANDIR_OPTIONS)
+                        g_choix = st.selectbox("Grandir à évaluer (suivi progression) :", GRANDIR_OPTIONS)
                         ex_val = enf_progs.get(g_choix, {})
                         c_n1, c_n2 = st.columns(2)
                         with c_n1:
-                            note_val = st.slider("Note de progression sur 10 :", min_value=1, max_value=10, value=int(ex_val.get("note", 8)))
+                            note_val = st.slider("Suivi progression sur 10 :", min_value=1, max_value=10, value=int(ex_val.get("note", 8)))
                         with c_n2:
-                            d_initial = parse_date_obj(ex_val.get("date_reussite", date.today()))
-                            date_reussite_val = st.date_input("Date de réussite / validation :", value=d_initial, format="DD/MM/YYYY")
+                            d_initial = parse_date_obj(ex_val.get("date_reussite"), default_today=False)
+                            date_reussite_val = st.date_input("Date de validation (optionnelle) :", value=d_initial, format="DD/MM/YYYY")
                         com_val = st.text_area("Observation pédagogique / Commentaires :", value=ex_val.get("commentaire", ""), placeholder="Ex : Très belle participation, a su aider son voisin lors du jeu...", height=70)
 
-                        if st.form_submit_button("💾 Enregistrer la progression du Farfadet", type="primary", use_container_width=True):
+                        if st.form_submit_button("💾 Enregistrer le suivi progression du Farfadet", type="primary", use_container_width=True):
+                            d_save = parse_date_to_iso(date_reussite_val) if date_reussite_val else ""
                             existing = next((p for p in prog_list if p.get("enfant_id") == sel_enf_id and p.get("grandir") == g_choix), None)
                             if existing:
                                 existing["note"] = note_val
-                                existing["date_reussite"] = parse_date_to_iso(date_reussite_val)
+                                existing["date_reussite"] = d_save
                                 existing["commentaire"] = com_val
                             else:
                                 new_pid = max([p.get("id", 0) for p in prog_list], default=0) + 1
@@ -2970,11 +2977,11 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                                     "enfant_nom": enfant_names_map.get(sel_enf_id),
                                     "grandir": g_choix,
                                     "note": note_val,
-                                    "date_reussite": parse_date_to_iso(date_reussite_val),
+                                    "date_reussite": d_save,
                                     "commentaire": com_val
                                 })
                             save_data(db)
-                            st.session_state["flash_success"] = f"✅ Progression '{g_choix}' enregistrée pour {enfant_names_map.get(sel_enf_id)} !"
+                            st.session_state["flash_success"] = f"✅ Suivi progression '{g_choix}' enregistré pour {enfant_names_map.get(sel_enf_id)} !"
                             st.rerun()
 
             # TABLEAU RÉCAPITULATIF DE TOUS LES FARFADETS
@@ -2994,7 +3001,7 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                     "🕊️ Jésus": f"{c_p_map['🕊️ Grandir avec Jésus'].get('note')}/10" if '🕊️ Grandir avec Jésus' in c_p_map else "-",
                     "❤️ Cœur": f"{c_p_map['❤️ Grandir avec son cœur'].get('note')}/10" if '❤️ Grandir avec son cœur' in c_p_map else "-",
                     "Grandir validés": f"{len(c_p_map)} / 6",
-                    "Moyenne": f"{round(sum(notes_c) / len(notes_c), 1)}/10" if notes_c else "-"
+                    "Moyenne suivi progression": f"{round(sum(notes_c) / len(notes_c), 1)}/10" if notes_c else "-"
                 }
                 recap_rows.append(row)
             st.dataframe(pd.DataFrame(recap_rows), use_container_width=True, hide_index=True)
@@ -3003,16 +3010,18 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
             if prog_list and is_responsable_or_admin():
                 with st.expander("📜 Journal détaillé des validations enregistrées"):
                     for pi, pr in enumerate(prog_list):
-                        cp1, cp2, cp3, cp4 = st.columns([2.5, 3, 1.2, 1])
+                        cp1, cp2, cp3, cp4 = st.columns([2.5, 3, 1.4, 1])
                         with cp1:
                             st.markdown(f"**{pr.get('enfant_nom')}**")
-                            st.caption(f"Validé le {format_date_fr(pr.get('date_reussite'))}")
+                            d_pr_raw = pr.get('date_reussite')
+                            d_pr_str = f"Validé le {format_date_fr(d_pr_raw)}" if d_pr_raw else "Validé"
+                            st.caption(d_pr_str)
                         with cp2:
                             st.markdown(f"{pr.get('grandir')}")
                             if pr.get('commentaire'):
                                 st.caption(pr.get('commentaire'))
                         with cp3:
-                            st.markdown(f'<span style="background:#DCFCE7; color:#166534; font-weight:700; padding:2px 8px; border-radius:10px;">⭐ {pr.get("note")}/10</span>', unsafe_allow_html=True)
+                            st.markdown(f'<span style="background:#DCFCE7; color:#166534; font-weight:700; padding:2px 8px; border-radius:10px;">⭐ Progression : {pr.get("note")}/10</span>', unsafe_allow_html=True)
                         with cp4:
                             if st.button("🗑️", key=f"del_prog_{pr.get('id', pi)}", help="Supprimer cette validation"):
                                 prog_list.pop(pi)
@@ -3337,25 +3346,72 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
         cur_edit_u_id = st.session_state.get("p_user_editing_id", None)
         is_adding_u = st.session_state.get("p_user_adding", False)
 
-        # Mapping membre_id -> Nom complet du membre
-        all_membres_map = {}
-        membres_choices = []
-        for r_item in db.get("rondes", []):
-            for mb_item in r_item.get("membres", []):
-                mb_label = f"{mb_item.get('id')} - {mb_item.get('prenom')} {mb_item.get('nom')} ({r_item.get('nom')})"
-                all_membres_map[mb_item.get("id")] = f"{mb_item.get('prenom')} {mb_item.get('nom')}"
-                membres_choices.append({
-                    "id": mb_item.get("id"),
-                    "label": mb_label
-                })
-
-        seen_labels = set()
+        # Construction de la liste des choix de membres pour rattachement
         unique_mb_choices = []
-        for m_ch in membres_choices:
-            if m_ch["label"] not in seen_labels:
-                seen_labels.add(m_ch["label"])
-                unique_mb_choices.append(m_ch)
-        mb_labels = [m["label"] for m in unique_mb_choices]
+        ordered_all_rondes = [current_ronde] + [r for r in db.get("rondes", []) if r.get("id") != current_ronde.get("id")]
+        seen_ch_keys = set()
+        for r_item in ordered_all_rondes:
+            for mb_item in r_item.get("membres", []):
+                ch_key = (r_item.get("id"), mb_item.get("id"))
+                if ch_key not in seen_ch_keys:
+                    seen_ch_keys.add(ch_key)
+                    r_tag = f" — {r_item.get('nom')}" if len(db.get("rondes", [])) > 1 else ""
+                    m_label = f"{mb_item.get('prenom')} {mb_item.get('nom')}{r_tag} ({mb_item.get('role', 'Membre')})"
+                    unique_mb_choices.append({
+                        "id": mb_item.get("id"),
+                        "ronde_id": r_item.get("id"),
+                        "prenom": mb_item.get("prenom"),
+                        "nom": mb_item.get("nom"),
+                        "label": m_label
+                    })
+
+        mb_choice_by_label = {m["label"]: m for m in unique_mb_choices}
+        mb_labels = list(mb_choice_by_label.keys())
+
+        # Fonction de résolution précise du membre rattaché à un utilisateur
+        def resolve_user_member_name(u):
+            mb_id = u.get("membre_id")
+            if not mb_id:
+                return "-"
+            m_rid = u.get("membre_ronde_id")
+            if m_rid:
+                r = next((r for r in db.get("rondes", []) if r.get("id") == m_rid), None)
+                if r:
+                    m = next((m for m in r.get("membres", []) if m.get("id") == mb_id), None)
+                    if m:
+                        return f"{m.get('prenom')} {m.get('nom')}"
+            u_rondes = u.get("rondes_autorisees", [])
+            if not isinstance(u_rondes, list) or not u_rondes:
+                u_rondes = [current_ronde.get("id", 1)]
+            priority_rids = []
+            if current_ronde.get("id") in u_rondes:
+                priority_rids.append(current_ronde.get("id"))
+            for rid in u_rondes:
+                if rid not in priority_rids:
+                    priority_rids.append(rid)
+            for r in db.get("rondes", []):
+                if r.get("id") not in priority_rids:
+                    priority_rids.append(r.get("id"))
+
+            u_prenom_c = u.get("prenom", "").strip().lower()
+            u_nom_c = u.get("nom", "").strip().lower()
+            for rid in priority_rids:
+                r = next((r for r in db.get("rondes", []) if r.get("id") == rid), None)
+                if r:
+                    m = next((m for m in r.get("membres", []) if m.get("id") == mb_id), None)
+                    if m:
+                        m_p = m.get("prenom", "").strip().lower()
+                        m_n = m.get("nom", "").strip().lower()
+                        if (u_nom_c and (u_nom_c in m_n or m_n in u_nom_c)) or (u_prenom_c and (u_prenom_c in m_p or m_p in u_prenom_c)):
+                            return f"{m.get('prenom')} {m.get('nom')}"
+
+            for rid in priority_rids:
+                r = next((r for r in db.get("rondes", []) if r.get("id") == rid), None)
+                if r:
+                    m = next((m for m in r.get("membres", []) if m.get("id") == mb_id), None)
+                    if m:
+                        return f"{m.get('prenom')} {m.get('nom')}"
+            return "-"
 
         all_rondes = db.get("rondes", [])
         ronde_id_to_name = {r["id"]: r.get("nom", f"Ronde {r['id']}") for r in all_rondes}
@@ -3392,10 +3448,21 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                         )
 
                         mb_idx = 0
+                        cur_t_mb_id = target_user.get("membre_id")
+                        cur_t_r_id = target_user.get("membre_ronde_id")
                         for idx_m, m_ch in enumerate(unique_mb_choices):
-                            if m_ch["id"] == target_user.get("membre_id"):
+                            if cur_t_r_id and m_ch["id"] == cur_t_mb_id and m_ch["ronde_id"] == cur_t_r_id:
                                 mb_idx = idx_m
                                 break
+                            elif not cur_t_r_id and m_ch["id"] == cur_t_mb_id and m_ch["ronde_id"] in target_user.get("rondes_autorisees", [current_ronde["id"]]):
+                                mb_idx = idx_m
+                                break
+                        else:
+                            for idx_m, m_ch in enumerate(unique_mb_choices):
+                                if m_ch["id"] == cur_t_mb_id:
+                                    mb_idx = idx_m
+                                    break
+
                         sel_mb_label = st.selectbox("Rattacher à un membre du groupe :", mb_labels, index=mb_idx) if mb_labels else None
 
                         user_curr_rondes = target_user.get("rondes_autorisees", [current_ronde["id"]])
@@ -3435,8 +3502,10 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                             target_user["nom"] = ed_nom.strip()
                             target_user["email"] = ed_email.strip()
                             target_user["role"] = ed_role
-                            if sel_mb_label:
-                                target_user["membre_id"] = int(sel_mb_label.split("-")[0].strip())
+                            if sel_mb_label and sel_mb_label in mb_choice_by_label:
+                                ch_sel = mb_choice_by_label[sel_mb_label]
+                                target_user["membre_id"] = ch_sel["id"]
+                                target_user["membre_ronde_id"] = ch_sel["ronde_id"]
                             target_user["rondes_autorisees"] = ed_rondes if ed_rondes else [current_ronde["id"]]
                             if ed_new_pwd:
                                 target_user["mot_de_passe"] = hash_password(ed_new_pwd)
@@ -3515,7 +3584,14 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                     elif len(u_pwd) < 4:
                         st.error("Le mot de passe doit comporter au moins 4 caractères.")
                     else:
-                        link_id = int(sel_mb_link.split("-")[0].strip()) if sel_mb_link else 1
+                        if sel_mb_link and sel_mb_link in mb_choice_by_label:
+                            chosen_ch = mb_choice_by_label[sel_mb_link]
+                            link_id = chosen_ch["id"]
+                            link_ronde_id = chosen_ch["ronde_id"]
+                        else:
+                            link_id = 1
+                            link_ronde_id = current_ronde["id"]
+
                         new_u_id = max([x.get("id", 0) for x in users_list], default=0) + 1
                         db.setdefault("utilisateurs", []).append({
                             "id": new_u_id,
@@ -3525,6 +3601,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                             "mot_de_passe": hash_password(u_pwd),
                             "role": u_role,
                             "membre_id": link_id,
+                            "membre_ronde_id": link_ronde_id,
                             "rondes_autorisees": new_rondes if new_rondes else [current_ronde["id"]]
                         })
                         save_data(db)
@@ -3560,7 +3637,7 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
                     u_role = u.get("role", "parent").lower()
                     badge_html = role_badges.get(u_role, f'<span style="background:#F3F4F6; color:#374151; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">{u_role.upper()}</span>')
                     is_me = (u_id == logged_user.get("id"))
-                    mb_name = all_membres_map.get(u.get("membre_id"), "-")
+                    mb_name = resolve_user_member_name(u)
 
                     c_id, c_name, c_mail, c_role, c_mb, c_actions = st.columns([0.7, 2.3, 2.5, 1.7, 1.4, 1.4])
                     with c_id:
