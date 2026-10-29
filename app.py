@@ -9,6 +9,8 @@ import re
 import hashlib
 import io
 import urllib.parse
+import requests
+import threading
 
 # Configuration de la page
 st.set_page_config(
@@ -293,151 +295,144 @@ def sync_parent_child_links(ronde, member_id, new_linked_ids, is_child):
                         c["parents_ids"].remove(member_id)
 
 # =============================================================
-# CHARGEMENT ET SAUVEGARDE DE LA BASE DE DONNÉES
+# SYNCHRONISATION EN DIRECT & EXTRACTION DES TABLES
 # =============================================================
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {"active_ronde_id": 1, "rondes": [], "utilisateurs": []}
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-            raw.setdefault("active_ronde_id", 1)
-            raw.setdefault("rondes", [])
-            raw.setdefault("utilisateurs", [])
-            for ro in raw.get("rondes", []):
-                ro.setdefault("imaginaire_photos", [])
-                ro.setdefault("imaginaire_titre", "L'Aventure des Farfadets")
-                ro.setdefault("progressions", [])
-                for mb in ro.get("membres", []):
-                    mb.setdefault("parents_ids", [])
-                    mb.setdefault("enfants_ids", [])
-                ro["rencontres"] = [normalize_rencontre_data(r) for r in ro.get("rencontres", [])]
-            return raw
-    except Exception:
-        return {"active_ronde_id": 1, "rondes": [], "utilisateurs": []}
+def extract_tables_dict(database_obj):
+    """
+    Extrait les 10 tables structurées de l'application sous forme de listes de dictionnaires,
+    utilisables directement pour l'export Excel ou la synchronisation Google Sheets en direct.
+    """
+    # 1. Rondes
+    rows_r = [{
+        "id": r.get("id"), "nom": r.get("nom", ""), "saison": r.get("saison", ""),
+        "groupe": r.get("groupe", ""), "peuplade": r.get("peuplade", ""), "lieu_habituel": r.get("lieu_habituel", "")
+    } for r in database_obj.get("rondes", [])]
+
+    # 2. Membres
+    rows_m = []
+    for r in database_obj.get("rondes", []):
+        for m in r.get("membres", []):
+            rows_m.append({
+                "id": m.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
+                "prenom": m.get("prenom", ""), "nom": m.get("nom", ""),
+                "role": m.get("role", "Enfant"), "contact": m.get("contact", ""), "photo": m.get("photo", ""),
+                "parents_ids": json.dumps(m.get("parents_ids", []), ensure_ascii=False),
+                "enfants_ids": json.dumps(m.get("enfants_ids", []), ensure_ascii=False)
+            })
+
+    # 3. Rencontres
+    rows_rc = []
+    for r in database_obj.get("rondes", []):
+        for rc in r.get("rencontres", []):
+            rows_rc.append({
+                "id": rc.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "titre": rc.get("titre", ""),
+                "type": rc.get("type", "Rencontre ronde"), "date": rc.get("date", ""), "horaire": rc.get("horaire", "14:00 - 17:00"),
+                "lieu": rc.get("lieu", ""), "lieu_adresse": rc.get("lieu_adresse", rc.get("lieu", "")),
+                "lat": rc.get("lat", 48.9417), "lon": rc.get("lon", 2.1645),
+                "animateur": rc.get("animateur", ""), "statut": rc.get("statut", "À venir"),
+                "description": rc.get("description", ""), "imaginaire_rencontre": rc.get("imaginaire_rencontre", ""),
+                "objectifs": rc.get("objectifs", ""), "compte_rendu": rc.get("compte_rendu", ""), "photo": rc.get("photo", ""),
+                "colonnes_deroule_json": json.dumps(rc.get("colonnes_deroule", []), ensure_ascii=False),
+                "deroule_json": json.dumps(rc.get("deroule", []), ensure_ascii=False),
+                "materiels_json": json.dumps(rc.get("materiels", []), ensure_ascii=False)
+            })
+
+    # 4. Deroules
+    rows_d = []
+    for r in database_obj.get("rondes", []):
+        for rc in r.get("rencontres", []):
+            custom_cols = rc.get("colonnes_deroule", [])
+            for idx, s in enumerate(rc.get("deroule", [])):
+                row_d = {
+                    "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "rencontre_id": rc.get("id"), "titre_rencontre": rc.get("titre", ""),
+                    "etape": idx + 1, "date": s.get("date", ""), "heure_debut": s.get("heure_debut", ""),
+                    "heure_fin": s.get("heure_fin", ""), "activite": s.get("activite", ""),
+                    "animateur": s.get("animateur", ""),
+                    "materiels": ", ".join(s.get("materiels", [])) if isinstance(s.get("materiels"), list) else str(s.get("materiels", "")),
+                    "commentaire": s.get("commentaire", "")
+                }
+                for cc in custom_cols:
+                    row_d[cc] = s.get(cc, "")
+                rows_d.append(row_d)
+
+    # 5. Materiels
+    rows_mat = []
+    for r in database_obj.get("rondes", []):
+        for rc in r.get("rencontres", []):
+            for m in rc.get("materiels", []):
+                rows_mat.append({
+                    "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "rencontre_id": rc.get("id"), "titre_rencontre": rc.get("titre", ""),
+                    "materiel_id": m.get("id", ""), "nom": m.get("nom", ""), "qui_amene": m.get("qui_amene", ""),
+                    "quantite_remarque": m.get("remarque", m.get("quantite", "")), "est_pret": "OUI" if m.get("ok") else "NON", "photo": m.get("photo", "")
+                })
+
+    # 6. Imaginaire
+    rows_im = [{
+        "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
+        "titre": r.get("imaginaire_titre", "L'Aventure des Farfadets"),
+        "texte": r.get("imaginaire", ""),
+        "photos_json": json.dumps(r.get("imaginaire_photos", []), ensure_ascii=False)
+    } for r in database_obj.get("rondes", [])]
+
+    # 7. Supports
+    rows_sp = []
+    for r in database_obj.get("rondes", []):
+        for sp in r.get("supports", []):
+            rows_sp.append({
+                "id": sp.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "titre": sp.get("titre", ""),
+                "url": sp.get("url", ""), "categorie": sp.get("categorie", "Pédagogie"), "desc": sp.get("desc", "")
+            })
+
+    # 8. Utilisateurs
+    rows_u = []
+    for u in database_obj.get("utilisateurs", []):
+        r_auth = u.get("rondes_autorisees", [])
+        rows_u.append({
+            "id": u.get("id"), "prenom": u.get("prenom", ""), "nom": u.get("nom", ""),
+            "email": u.get("email", ""), "role": u.get("role", "parent"), "membre_id": u.get("membre_id", ""),
+            "membre_ronde_id": u.get("membre_ronde_id", 1),
+            "rondes_autorisees": ", ".join(map(str, r_auth)) if isinstance(r_auth, list) else str(r_auth)
+        })
+
+    # 9. Progressions
+    rows_prog = []
+    for r in database_obj.get("rondes", []):
+        for p in r.get("progressions", []):
+            rows_prog.append({
+                "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
+                "id": p.get("id"), "enfant_id": p.get("enfant_id"), "enfant_nom": p.get("enfant_nom", ""),
+                "grandir": p.get("grandir", ""), "note_sur_10": p.get("note", 10),
+                "date_reussite": p.get("date_reussite", ""), "commentaire": p.get("commentaire", "")
+            })
+
+    # 10. Configuration
+    rows_cfg = [
+        {"cle": "active_ronde_id", "valeur": str(database_obj.get("active_ronde_id", 1))},
+        {"cle": "google_sheet_url", "valeur": str(database_obj.get("google_sheet_url", ""))},
+        {"cle": "google_sheet_webhook_url", "valeur": str(database_obj.get("google_sheet_webhook_url", ""))},
+        {"cle": "google_sheet_auto_sync", "valeur": "1" if database_obj.get("google_sheet_auto_sync", True) else "0"},
+        {"cle": "date_export", "valeur": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
+    ]
+
+    return {
+        "Rondes": rows_r,
+        "Membres": rows_m,
+        "Rencontres": rows_rc,
+        "Deroules": rows_d,
+        "Materiels": rows_mat,
+        "Imaginaire": rows_im,
+        "Supports": rows_sp,
+        "Utilisateurs": rows_u,
+        "Progressions": rows_prog,
+        "Configuration": rows_cfg
+    }
 
 def build_excel_export_bytes(database_obj, save_path=None):
+    tables = extract_tables_dict(database_obj)
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        # 1. Rondes
-        rows_r = [{
-            "id": r.get("id"), "nom": r.get("nom", ""), "saison": r.get("saison", ""),
-            "groupe": r.get("groupe", ""), "peuplade": r.get("peuplade", ""), "lieu_habituel": r.get("lieu_habituel", "")
-        } for r in database_obj.get("rondes", [])]
-        pd.DataFrame(rows_r).to_excel(writer, sheet_name="Rondes", index=False)
-        
-        # 2. Membres
-        rows_m = []
-        for r in database_obj.get("rondes", []):
-            for m in r.get("membres", []):
-                rows_m.append({
-                    "id": m.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
-                    "prenom": m.get("prenom", ""), "nom": m.get("nom", ""),
-                    "role": m.get("role", "Enfant"), "contact": m.get("contact", ""), "photo": m.get("photo", ""),
-                    "parents_ids": json.dumps(m.get("parents_ids", []), ensure_ascii=False),
-                    "enfants_ids": json.dumps(m.get("enfants_ids", []), ensure_ascii=False)
-                })
-        pd.DataFrame(rows_m).to_excel(writer, sheet_name="Membres", index=False)
-
-        # 3. Rencontres (paramétrage complet du site)
-        rows_rc = []
-        for r in database_obj.get("rondes", []):
-            for rc in r.get("rencontres", []):
-                rows_rc.append({
-                    "id": rc.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "titre": rc.get("titre", ""),
-                    "type": rc.get("type", "Rencontre ronde"), "date": rc.get("date", ""), "horaire": rc.get("horaire", "14:00 - 17:00"),
-                    "lieu": rc.get("lieu", ""), "lieu_adresse": rc.get("lieu_adresse", rc.get("lieu", "")),
-                    "lat": rc.get("lat", 48.9417), "lon": rc.get("lon", 2.1645),
-                    "animateur": rc.get("animateur", ""), "statut": rc.get("statut", "À venir"),
-                    "description": rc.get("description", ""), "imaginaire_rencontre": rc.get("imaginaire_rencontre", ""),
-                    "objectifs": rc.get("objectifs", ""), "compte_rendu": rc.get("compte_rendu", ""), "photo": rc.get("photo", ""),
-                    "colonnes_deroule_json": json.dumps(rc.get("colonnes_deroule", []), ensure_ascii=False),
-                    "deroule_json": json.dumps(rc.get("deroule", []), ensure_ascii=False),
-                    "materiels_json": json.dumps(rc.get("materiels", []), ensure_ascii=False)
-                })
-        pd.DataFrame(rows_rc).to_excel(writer, sheet_name="Rencontres", index=False)
-
-        # 4. Deroules (tableau détaillé étape par étape)
-        rows_d = []
-        for r in database_obj.get("rondes", []):
-            for rc in r.get("rencontres", []):
-                custom_cols = rc.get("colonnes_deroule", [])
-                for idx, s in enumerate(rc.get("deroule", [])):
-                    row_d = {
-                        "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "rencontre_id": rc.get("id"), "titre_rencontre": rc.get("titre", ""),
-                        "etape": idx + 1, "date": s.get("date", ""), "heure_debut": s.get("heure_debut", ""),
-                        "heure_fin": s.get("heure_fin", ""), "activite": s.get("activite", ""),
-                        "animateur": s.get("animateur", ""),
-                        "materiels": ", ".join(s.get("materiels", [])) if isinstance(s.get("materiels"), list) else str(s.get("materiels", "")),
-                        "commentaire": s.get("commentaire", "")
-                    }
-                    for cc in custom_cols:
-                        row_d[cc] = s.get(cc, "")
-                    rows_d.append(row_d)
-        pd.DataFrame(rows_d).to_excel(writer, sheet_name="Deroules", index=False)
-
-        # 5. Materiels (inventaire détaillé)
-        rows_mat = []
-        for r in database_obj.get("rondes", []):
-            for rc in r.get("rencontres", []):
-                for m in rc.get("materiels", []):
-                    rows_mat.append({
-                        "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "rencontre_id": rc.get("id"), "titre_rencontre": rc.get("titre", ""),
-                        "materiel_id": m.get("id", ""), "nom": m.get("nom", ""), "qui_amene": m.get("qui_amene", ""),
-                        "quantite_remarque": m.get("remarque", m.get("quantite", "")), "est_pret": "OUI" if m.get("ok") else "NON", "photo": m.get("photo", "")
-                    })
-        pd.DataFrame(rows_mat).to_excel(writer, sheet_name="Materiels", index=False)
-
-        # 6. Imaginaire
-        rows_im = [{
-            "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
-            "titre": r.get("imaginaire_titre", "L'Aventure des Farfadets"),
-            "texte": r.get("imaginaire", ""),
-            "photos_json": json.dumps(r.get("imaginaire_photos", []), ensure_ascii=False)
-        } for r in database_obj.get("rondes", [])]
-        pd.DataFrame(rows_im).to_excel(writer, sheet_name="Imaginaire", index=False)
-
-        # 7. Supports
-        rows_sp = []
-        for r in database_obj.get("rondes", []):
-            for sp in r.get("supports", []):
-                rows_sp.append({
-                    "id": sp.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "titre": sp.get("titre", ""),
-                    "url": sp.get("url", ""), "categorie": sp.get("categorie", "Pédagogie"), "desc": sp.get("desc", "")
-                })
-        pd.DataFrame(rows_sp).to_excel(writer, sheet_name="Supports", index=False)
-
-        # 8. Utilisateurs
-        rows_u = []
-        for u in database_obj.get("utilisateurs", []):
-            r_auth = u.get("rondes_autorisees", [])
-            rows_u.append({
-                "id": u.get("id"), "prenom": u.get("prenom", ""), "nom": u.get("nom", ""),
-                "email": u.get("email", ""), "role": u.get("role", "parent"), "membre_id": u.get("membre_id", ""),
-                "rondes_autorisees": ", ".join(map(str, r_auth)) if isinstance(r_auth, list) else str(r_auth)
-            })
-        pd.DataFrame(rows_u).to_excel(writer, sheet_name="Utilisateurs", index=False)
-
-        # 9. Progressions (Les Grandir des Farfadets)
-        rows_prog = []
-        for r in database_obj.get("rondes", []):
-            for p in r.get("progressions", []):
-                rows_prog.append({
-                    "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""),
-                    "id": p.get("id"), "enfant_id": p.get("enfant_id"), "enfant_nom": p.get("enfant_nom", ""),
-                    "grandir": p.get("grandir", ""), "note_sur_10": p.get("note", 10),
-                    "date_reussite": p.get("date_reussite", ""), "commentaire": p.get("commentaire", "")
-                })
-        pd.DataFrame(rows_prog).to_excel(writer, sheet_name="Progressions", index=False)
-
-        # 10. Configuration
-        rows_cfg = [
-            {"cle": "active_ronde_id", "valeur": str(database_obj.get("active_ronde_id", 1))},
-            {"cle": "google_sheet_url", "valeur": str(database_obj.get("google_sheet_url", ""))},
-            {"cle": "date_export", "valeur": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
-        ]
-        pd.DataFrame(rows_cfg).to_excel(writer, sheet_name="Configuration", index=False)
-
+        for sheet_name, rows in tables.items():
+            pd.DataFrame(rows).to_excel(writer, sheet_name=sheet_name, index=False)
     data = buf.getvalue()
     if save_path:
         try:
@@ -446,6 +441,356 @@ def build_excel_export_bytes(database_obj, save_path=None):
         except Exception:
             pass
     return data
+
+def get_google_sheet_webhook_url(data_obj=None):
+    """
+    Récupère l'URL du webhook Google Apps Script, en vérifiant d'abord dans st.secrets,
+    puis dans l'objet de base de données.
+    """
+    try:
+        if "GOOGLE_SHEET_WEBHOOK_URL" in st.secrets:
+            s_url = str(st.secrets["GOOGLE_SHEET_WEBHOOK_URL"]).strip()
+            if s_url:
+                return s_url
+        if "google_sheet_webhook_url" in st.secrets:
+            s_url = str(st.secrets["google_sheet_webhook_url"]).strip()
+            if s_url:
+                return s_url
+    except Exception:
+        pass
+    if data_obj and isinstance(data_obj, dict):
+        return str(data_obj.get("google_sheet_webhook_url", "")).strip()
+    try:
+        if "db" in globals() and isinstance(globals()["db"], dict):
+            return str(globals()["db"].get("google_sheet_webhook_url", "")).strip()
+    except Exception:
+        pass
+    return ""
+
+def push_to_google_sheet(database_obj, webhook_url=None):
+    """
+    Envoie en direct la totalité des 10 tables vers le Google Sheet via le Webhook Apps Script.
+    """
+    url = webhook_url or get_google_sheet_webhook_url(database_obj)
+    if not url:
+        return False, "Aucun Webhook Google Sheets configuré."
+    try:
+        tables = extract_tables_dict(database_obj)
+        payload = {
+            "action": "save_all",
+            "source": "AppScout",
+            "timestamp": datetime.now().isoformat(),
+            "tables": tables
+        }
+        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=25, allow_redirects=True)
+        if res.status_code in (200, 201, 302):
+            try:
+                js = res.json()
+                if js.get("status") == "success":
+                    return True, "Synchronisation en direct réussie !"
+            except Exception:
+                pass
+            return True, "Données transmises avec succès à Google Sheets !"
+        else:
+            return False, f"Code de réponse HTTP du serveur Google : {res.status_code}"
+    except Exception as e:
+        return False, f"Erreur de communication : {e}"
+
+def push_to_google_sheet_async(database_obj):
+    """
+    Lance l'envoi vers Google Sheets en arrière-plan dans un thread détaché
+    pour ne jamais ralentir ou bloquer l'expérience utilisateur.
+    """
+    url = get_google_sheet_webhook_url(database_obj)
+    auto_sync = database_obj.get("google_sheet_auto_sync", True)
+    if not url or not auto_sync:
+        return
+    t = threading.Thread(target=push_to_google_sheet, args=(database_obj, url), daemon=True)
+    t.start()
+
+def fetch_from_google_sheet_webhook(webhook_url):
+    """
+    Interroge le Webhook Apps Script via GET pour récupérer l'ensemble des tables du Google Sheet.
+    """
+    try:
+        res = requests.get(webhook_url, params={"action": "get_all"}, timeout=15, allow_redirects=True)
+        if res.status_code == 200:
+            js = res.json()
+            if js.get("status") == "success" and "tables" in js and js["tables"]:
+                dfs = {k: pd.DataFrame(v) for k, v in js["tables"].items() if v}
+                return True, dfs
+            return False, js.get("message", "Le Webhook a répondu mais aucune table n'a été renvoyée.")
+        return False, f"Erreur HTTP {res.status_code}"
+    except Exception as e:
+        return False, f"Impossible de joindre le Webhook : {e}"
+
+def parse_and_apply_imported_tables(dfs_dict, db_target):
+    """
+    Parse les DataFrames importés depuis Google Sheets (Webhook ou CSV)
+    et met à jour la structure de base de données en mémoire.
+    """
+    df_r = dfs_dict.get("Rondes", pd.DataFrame())
+    df_m = dfs_dict.get("Membres", pd.DataFrame())
+    df_rc = dfs_dict.get("Rencontres", pd.DataFrame())
+    df_im = dfs_dict.get("Imaginaire", pd.DataFrame())
+    df_sp = dfs_dict.get("Supports", pd.DataFrame())
+    df_d = dfs_dict.get("Deroules", pd.DataFrame())
+    df_mat = dfs_dict.get("Materiels", pd.DataFrame())
+    df_u_sheet = dfs_dict.get("Utilisateurs", pd.DataFrame())
+    df_prog = dfs_dict.get("Progressions", pd.DataFrame())
+
+    if df_r.empty or "id" not in df_r.columns:
+        return db_target
+
+    new_rondes = []
+    for _, row_r in df_r.iterrows():
+        rid = safe_int(row_r.get("id"))
+        
+        # Membres
+        r_membres = []
+        if not df_m.empty and "ronde_id" in df_m.columns:
+            for _, row_m in df_m[df_m["ronde_id"] == rid].iterrows():
+                p_ids_val = row_m.get("parents_ids", "[]")
+                try:
+                    p_ids = json.loads(str(p_ids_val)) if pd.notna(p_ids_val) and str(p_ids_val).strip() else []
+                except Exception:
+                    p_ids = []
+                e_ids_val = row_m.get("enfants_ids", "[]")
+                try:
+                    e_ids = json.loads(str(e_ids_val)) if pd.notna(e_ids_val) and str(e_ids_val).strip() else []
+                except Exception:
+                    e_ids = []
+
+                r_membres.append({
+                    "id": safe_int(row_m.get("id")),
+                    "prenom": str(row_m.get("prenom", "")),
+                    "nom": str(row_m.get("nom", "")),
+                    "role": str(row_m.get("role", "Enfant")),
+                    "contact": str(row_m.get("contact", "")) if pd.notna(row_m.get("contact")) else "",
+                    "photo": str(row_m.get("photo", "")) if pd.notna(row_m.get("photo")) else "",
+                    "parents_ids": p_ids,
+                    "enfants_ids": e_ids
+                })
+
+        # Rencontres
+        r_rencontres = []
+        if not df_rc.empty and "ronde_id" in df_rc.columns:
+            for _, row_rc in df_rc[df_rc["ronde_id"] == rid].iterrows():
+                rc_id = safe_int(row_rc.get("id"))
+
+                # Deroule
+                deroule_val = row_rc.get("deroule_json", "[]")
+                try:
+                    deroule_parsed = json.loads(str(deroule_val)) if pd.notna(deroule_val) and str(deroule_val).strip() else []
+                except Exception:
+                    deroule_parsed = []
+
+                if not deroule_parsed and not df_d.empty and "rencontre_id" in df_d.columns:
+                    sub_d = df_d[(df_d["ronde_id"] == rid) & (df_d["rencontre_id"] == rc_id)]
+                    if not sub_d.empty:
+                        for _, row_d in sub_d.iterrows():
+                            mats = str(row_d.get("materiels", ""))
+                            mat_list = [x.strip() for x in mats.split(",") if x.strip()] if mats and mats != "nan" else []
+                            deroule_parsed.append({
+                                "date": str(row_d.get("date", "")) if pd.notna(row_d.get("date")) else "",
+                                "heure_debut": str(row_d.get("heure_debut", "")) if pd.notna(row_d.get("heure_debut")) else "",
+                                "heure_fin": str(row_d.get("heure_fin", "")) if pd.notna(row_d.get("heure_fin")) else "",
+                                "activite": str(row_d.get("activite", "")) if pd.notna(row_d.get("activite")) else "",
+                                "animateur": str(row_d.get("animateur", "")) if pd.notna(row_d.get("animateur")) else "",
+                                "commentaire": str(row_d.get("commentaire", "")) if pd.notna(row_d.get("commentaire")) else "",
+                                "materiels": mat_list
+                            })
+
+                col_d_val = row_rc.get("colonnes_deroule_json", "[]")
+                try:
+                    colonnes_parsed = json.loads(str(col_d_val)) if pd.notna(col_d_val) and str(col_d_val).strip() else []
+                except Exception:
+                    colonnes_parsed = []
+
+                mat_val = row_rc.get("materiels_json", "[]")
+                try:
+                    mat_parsed = json.loads(str(mat_val)) if pd.notna(mat_val) and str(mat_val).strip() else []
+                except Exception:
+                    mat_parsed = []
+
+                if not mat_parsed and not df_mat.empty and "rencontre_id" in df_mat.columns:
+                    sub_mat = df_mat[(df_mat["ronde_id"] == rid) & (df_mat["rencontre_id"] == rc_id)]
+                    if not sub_mat.empty:
+                        for _, row_mat in sub_mat.iterrows():
+                            est_pret_val = str(row_mat.get("est_pret", "")).upper()
+                            mat_parsed.append({
+                                "id": safe_int(row_mat.get("materiel_id", 1)),
+                                "nom": str(row_mat.get("nom", "")) if pd.notna(row_mat.get("nom")) else "",
+                                "qui_amene": str(row_mat.get("qui_amene", "")) if pd.notna(row_mat.get("qui_amene")) else "",
+                                "remarque": str(row_mat.get("quantite_remarque", "")) if pd.notna(row_mat.get("quantite_remarque")) else "",
+                                "ok": (est_pret_val in ("OUI", "TRUE", "1", "VRAI")),
+                                "photo": str(row_mat.get("photo", "")) if pd.notna(row_mat.get("photo")) else ""
+                            })
+
+                lat_val = safe_float(row_rc.get("lat"), 48.9417)
+                lon_val = safe_float(row_rc.get("lon"), 2.1645)
+                lieu_adr = str(row_rc.get("lieu_adresse", row_rc.get("lieu", ""))) if pd.notna(row_rc.get("lieu_adresse")) else str(row_rc.get("lieu", ""))
+
+                r_rencontres.append({
+                    "id": rc_id,
+                    "titre": str(row_rc.get("titre", "")),
+                    "type": str(row_rc.get("type", "Rencontre ronde")),
+                    "date": str(row_rc.get("date", "")),
+                    "horaire": str(row_rc.get("horaire", "14:00 - 17:00")),
+                    "lieu": str(row_rc.get("lieu", "")),
+                    "lieu_adresse": lieu_adr,
+                    "lat": lat_val,
+                    "lon": lon_val,
+                    "animateur": str(row_rc.get("animateur", "")) if pd.notna(row_rc.get("animateur")) else "",
+                    "statut": str(row_rc.get("statut", "À venir")),
+                    "description": str(row_rc.get("description", "")) if pd.notna(row_rc.get("description")) else "",
+                    "imaginaire_rencontre": str(row_rc.get("imaginaire_rencontre", "")) if pd.notna(row_rc.get("imaginaire_rencontre")) else "",
+                    "objectifs": str(row_rc.get("objectifs", "")) if pd.notna(row_rc.get("objectifs")) else "",
+                    "compte_rendu": str(row_rc.get("compte_rendu", "")) if pd.notna(row_rc.get("compte_rendu")) else "",
+                    "photo": str(row_rc.get("photo", "")) if pd.notna(row_rc.get("photo")) else "",
+                    "colonnes_deroule": colonnes_parsed,
+                    "deroule": deroule_parsed,
+                    "materiels": mat_parsed
+                })
+
+        # Imaginaire
+        im_text = ""
+        im_titre = "L'Aventure des Farfadets"
+        im_photos = []
+        if not df_im.empty and "ronde_id" in df_im.columns:
+            im_sub = df_im[df_im["ronde_id"] == rid]
+            if not im_sub.empty:
+                im_text = str(im_sub.iloc[0].get("texte", "")) if pd.notna(im_sub.iloc[0].get("texte")) else ""
+                if "titre" in im_sub.columns and pd.notna(im_sub.iloc[0].get("titre")):
+                    im_titre = str(im_sub.iloc[0]["titre"])
+                if "photos_json" in im_sub.columns and pd.notna(im_sub.iloc[0].get("photos_json")):
+                    try:
+                        im_photos = json.loads(str(im_sub.iloc[0]["photos_json"]))
+                    except Exception:
+                        im_photos = []
+
+        # Supports
+        r_supports = []
+        if not df_sp.empty and "ronde_id" in df_sp.columns:
+            for _, row_sp in df_sp[df_sp["ronde_id"] == rid].iterrows():
+                r_supports.append({
+                    "id": safe_int(row_sp.get("id")),
+                    "titre": str(row_sp.get("titre", "")),
+                    "url": str(row_sp.get("url", "")),
+                    "categorie": str(row_sp.get("categorie", "Pédagogie")),
+                    "desc": str(row_sp.get("desc", "")) if pd.notna(row_sp.get("desc")) else ""
+                })
+
+        # Progressions (Grandir)
+        r_prog = []
+        if not df_prog.empty and "ronde_id" in df_prog.columns:
+            for _, row_p in df_prog[df_prog["ronde_id"] == rid].iterrows():
+                r_prog.append({
+                    "id": safe_int(row_p.get("id")),
+                    "enfant_id": safe_int(row_p.get("enfant_id")),
+                    "enfant_nom": str(row_p.get("enfant_nom", "")),
+                    "grandir": str(row_p.get("grandir", "")),
+                    "note": safe_float(row_p.get("note_sur_10"), 10.0),
+                    "date_reussite": str(row_p.get("date_reussite", "")) if pd.notna(row_p.get("date_reussite")) else "",
+                    "commentaire": str(row_p.get("commentaire", "")) if pd.notna(row_p.get("commentaire")) else ""
+                })
+
+        new_rondes.append({
+            "id": rid,
+            "nom": str(row_r.get("nom", "")),
+            "saison": str(row_r.get("saison", "")),
+            "groupe": str(row_r.get("groupe", "")),
+            "peuplade": str(row_r.get("peuplade", "Branche scoute des 6 - 8 ans et leurs parents")),
+            "lieu_habituel": str(row_r.get("lieu_habituel", "")),
+            "membres": r_membres,
+            "rencontres": [normalize_rencontre_data(rc) for rc in r_rencontres],
+            "imaginaire": im_text,
+            "imaginaire_titre": im_titre,
+            "imaginaire_photos": im_photos,
+            "supports": r_supports,
+            "progressions": r_prog
+        })
+
+    if new_rondes:
+        db_target["rondes"] = new_rondes
+        if "active_ronde_id" not in db_target or db_target["active_ronde_id"] not in [r["id"] for r in new_rondes]:
+            db_target["active_ronde_id"] = new_rondes[0]["id"]
+
+    # Utilisateurs
+    if not df_u_sheet.empty and "email" in df_u_sheet.columns:
+        imported_users = []
+        for _, row_u in df_u_sheet.iterrows():
+            u_email = str(row_u.get("email", "")).strip()
+            if not u_email or u_email == "nan":
+                continue
+            existing_u = next((u for u in db_target.get("utilisateurs", []) if u.get("email", "").strip().lower() == u_email.lower()), None)
+            pwd_hash = existing_u.get("mot_de_passe") if existing_u else hash_password("scout123")
+            u_id = safe_int(row_u.get("id")) if pd.notna(row_u.get("id")) else (existing_u.get("id") if existing_u else len(imported_users) + 1)
+            r_auth_str = str(row_u.get("rondes_autorisees", ""))
+            try:
+                r_auth = [int(x.strip()) for x in r_auth_str.split(",") if x.strip().isdigit()]
+            except Exception:
+                r_auth = [new_rondes[0]["id"]] if new_rondes else [1]
+            if not r_auth:
+                r_auth = [new_rondes[0]["id"]] if new_rondes else [1]
+
+            m_rid = safe_int(row_u.get("membre_ronde_id", 1))
+            imported_users.append({
+                "id": u_id,
+                "prenom": str(row_u.get("prenom", "")),
+                "nom": str(row_u.get("nom", "")),
+                "email": u_email,
+                "mot_de_passe": pwd_hash,
+                "role": str(row_u.get("role", "parent")).lower(),
+                "membre_id": safe_int(row_u.get("membre_id"), 1),
+                "membre_ronde_id": m_rid,
+                "rondes_autorisees": r_auth
+            })
+        if imported_users:
+            db_target["utilisateurs"] = imported_users
+
+    return db_target
+
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        raw = {"active_ronde_id": 1, "rondes": [], "utilisateurs": []}
+    else:
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+        except Exception:
+            raw = {"active_ronde_id": 1, "rondes": [], "utilisateurs": []}
+
+    raw.setdefault("active_ronde_id", 1)
+    raw.setdefault("rondes", [])
+    raw.setdefault("utilisateurs", [])
+    raw.setdefault("google_sheet_auto_sync", True)
+    raw.setdefault("google_sheet_webhook_url", "")
+
+    # Synchronisation initiale depuis Google Sheets si configuré (permet de récupérer les données après un redéploiement Git)
+    sync_url = get_google_sheet_webhook_url(raw)
+    if sync_url and raw.get("google_sheet_auto_sync", True):
+        try:
+            ok, dfs = fetch_from_google_sheet_webhook(sync_url)
+            if ok and "Rondes" in dfs and not dfs["Rondes"].empty:
+                raw = parse_and_apply_imported_tables(dfs, raw)
+                try:
+                    with open(DATA_FILE, "w", encoding="utf-8") as f:
+                        json.dump(raw, f, ensure_ascii=False, indent=2)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    for ro in raw.get("rondes", []):
+        ro.setdefault("imaginaire_photos", [])
+        ro.setdefault("imaginaire_titre", "L'Aventure des Farfadets")
+        ro.setdefault("progressions", [])
+        for mb in ro.get("membres", []):
+            mb.setdefault("parents_ids", [])
+            mb.setdefault("enfants_ids", [])
+        ro["rencontres"] = [normalize_rencontre_data(r) for r in ro.get("rencontres", [])]
+    return raw
 
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -456,6 +801,8 @@ def save_data(data):
         build_excel_export_bytes(data, save_path=excel_mirror_path)
     except Exception:
         pass
+    # Synchronisation automatique en direct vers Google Sheets en arrière-plan
+    push_to_google_sheet_async(data)
 
 db = load_data()
 
@@ -3858,259 +4205,272 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
 
     # SYNCHRONISATION GOOGLE SHEETS
     elif cur_param_tab == "☁️ Synchronisation Google Sheets":
-        st.subheader("☁️ Synchronisation Google Sheets & Collaboratif")
-        st.caption("Exportez la totalité des données du site sous forme d'un classeur Excel complet (9 onglets synchronisés avec votre base de données JSON) ou synchronisez depuis un Google Sheet partagé.")
+        st.subheader("☁️ Synchronisation Google Sheets & Sauvegarde en Direct")
+        st.caption("Connectez votre Google Sheet pour que chaque modification apportée sur le site (rencontres, déroulés, matériels, membres, progressions...) s'enregistre automatiquement et en temps réel dans votre Google Drive.")
 
-        excel_path = os.path.join(os.path.dirname(__file__), "Modele_Google_Sheets_Ronde_Farfadets.xlsx")
-        try:
-            excel_bytes = build_excel_export_bytes(db, save_path=excel_path)
-        except Exception:
-            excel_bytes = None
+        current_webhook_url = get_google_sheet_webhook_url(db)
+        is_auto_sync = db.get("google_sheet_auto_sync", True)
 
-        col_dl1, col_dl2 = st.columns([2, 1])
-        with col_dl1:
+        # 1. BANNIÈRE D'ÉTAT DE SYNCHRONISATION
+        if current_webhook_url:
+            st.success("🟢 **Synchronisation en direct ACTIVE** : Toute modification enregistrée sur l'application met à jour automatiquement votre Google Sheet en arrière-plan sans bloquer l'interface.")
+        else:
+            st.info("⚪ **Synchronisation en direct INACTIVE** : Les données sont actuellement stockées sur le disque local du conteneur. Configurez le Webhook ci-dessous pour activer la sauvegarde en direct dans votre Google Drive et ne plus jamais perdre de données lors d'un déploiement Git.")
+
+        # 2. CONFIGURATION DU WEBHOOK GOOGLE APPS SCRIPT
+        st.markdown("##### ⚡ Configuration de la mise à jour en direct")
+        with st.form("form_config_webhook_gsheet"):
+            c_wh1, c_wh2 = st.columns([3, 1])
+            with c_wh1:
+                wh_input = st.text_input(
+                    "🔗 URL de l'Application Web Apps Script (Webhook) :",
+                    value=current_webhook_url,
+                    placeholder="https://script.google.com/macros/s/AKfycb.../exec",
+                    help="Collez ici l'URL obtenue après avoir déployé le script Google Apps Script dans votre Google Sheet."
+                )
+            with c_wh2:
+                wh_auto = st.checkbox(
+                    "Mise à jour automatique en direct",
+                    value=is_auto_sync,
+                    help="Dès qu'une modification est enregistrée (rencontre, matériel, membre...), elle est immédiatement transmise au Google Sheet."
+                )
+
+            sub_wh = st.form_submit_button("💾 Enregistrer les paramètres de synchronisation", type="primary", use_container_width=True)
+            if sub_wh:
+                clean_wh = wh_input.strip()
+                if clean_wh and not clean_wh.startswith("https://script.google.com/"):
+                    st.warning("⚠️ Attention : L'URL du Webhook Apps Script commence généralement par 'https://script.google.com/macros/s/.../exec'.")
+                db["google_sheet_webhook_url"] = clean_wh
+                db["google_sheet_auto_sync"] = wh_auto
+                save_data(db)
+                st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
+                st.session_state["flash_success"] = "✅ Paramètres de synchronisation Google Sheets enregistrés !"
+                st.rerun()
+
+        # 3. ACTIONS DE SYNCHRONISATION MANUELLE
+        st.markdown("##### 🔄 Actions immédiates")
+        col_act1, col_act2, col_act3 = st.columns(3)
+        with col_act1:
+            if st.button("🚀 Envoyer les données vers Google Sheets (Push)", type="primary", use_container_width=True, help="Transmet immédiatement toutes les données actuelles vers votre Google Sheet."):
+                target_url = wh_input.strip() if 'wh_input' in locals() and wh_input.strip() else current_webhook_url
+                if not target_url:
+                    st.error("Veuillez d'abord renseigner et enregistrer l'URL du Webhook Apps Script.")
+                else:
+                    with st.spinner("Envoi des 10 tables vers Google Sheets en cours..."):
+                        ok_push, msg_push = push_to_google_sheet(db, target_url)
+                        if ok_push:
+                            st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
+                            st.session_state["flash_success"] = f"✅ {msg_push} ({datetime.now().strftime('%H:%M:%S')})"
+                            st.rerun()
+                        else:
+                            st.error(f"Échec de l'envoi : {msg_push}")
+
+        with col_act2:
+            if st.button("📥 Charger depuis Google Sheets (Pull)", use_container_width=True, help="Récupère la totalité des données du Google Sheet et met à jour l'application."):
+                target_url = wh_input.strip() if 'wh_input' in locals() and wh_input.strip() else current_webhook_url
+                with st.spinner("Récupération des données depuis Google Sheets..."):
+                    imported_ok = False
+                    # Tentative 1 : via Webhook GET
+                    if target_url:
+                        ok_fetch, dfs_or_err = fetch_from_google_sheet_webhook(target_url)
+                        if ok_fetch:
+                            parse_and_apply_imported_tables(dfs_or_err, db)
+                            save_data(db)
+                            imported_ok = True
+                            st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
+                            st.session_state["flash_success"] = "✅ Données restaurées avec succès depuis Google Sheets via le Webhook !"
+                            st.rerun()
+                    
+                    # Tentative 2 : via URL classique CSV si le webhook n'a pas répondu ou n'est pas renseigné
+                    if not imported_ok and db.get("google_sheet_url"):
+                        m_csv = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", db.get("google_sheet_url", ""))
+                        if m_csv:
+                            sheet_id = m_csv.group(1)
+                            def _fetch_csv(s_name):
+                                try:
+                                    enc = urllib.parse.quote(s_name)
+                                    u = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={enc}"
+                                    return pd.read_csv(u)
+                                except Exception:
+                                    return pd.DataFrame()
+                            dfs_csv = {
+                                "Rondes": _fetch_csv("Rondes"),
+                                "Membres": _fetch_csv("Membres"),
+                                "Rencontres": _fetch_csv("Rencontres"),
+                                "Deroules": _fetch_csv("Deroules"),
+                                "Materiels": _fetch_csv("Materiels"),
+                                "Imaginaire": _fetch_csv("Imaginaire"),
+                                "Supports": _fetch_csv("Supports"),
+                                "Utilisateurs": _fetch_csv("Utilisateurs"),
+                                "Progressions": _fetch_csv("Progressions")
+                            }
+                            if not dfs_csv["Rondes"].empty:
+                                parse_and_apply_imported_tables(dfs_csv, db)
+                                save_data(db)
+                                imported_ok = True
+                                st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
+                                st.session_state["flash_success"] = "✅ Données chargées avec succès depuis les feuilles CSV du Google Sheet !"
+                                st.rerun()
+                    
+                    if not imported_ok:
+                        st.error("Impossible de charger les données : vérifiez l'URL de votre Webhook ou l'URL publique de votre Google Sheet.")
+
+        with col_act3:
+            excel_path = os.path.join(os.path.dirname(__file__), "Modele_Google_Sheets_Ronde_Farfadets.xlsx")
+            try:
+                excel_bytes = build_excel_export_bytes(db, save_path=excel_path)
+            except Exception:
+                excel_bytes = None
             if excel_bytes:
                 st.download_button(
-                    label="📊 Télécharger le classeur Excel complet (9 onglets à jour du JSON)",
+                    label="📊 Télécharger le classeur Excel (.xlsx)",
                     data=excel_bytes,
                     file_name="Modele_Google_Sheets_Ronde_Farfadets.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
             else:
-                st.warning("Impossible de générer le flux Excel pour le moment.")
-        with col_dl2:
-            st.caption("💡 9 onglets inclus : Rondes, Membres, Rencontres, Déroulés, Matériels, Imaginaire, Supports, Utilisateurs, Configuration.")
+                st.button("📊 Classeur Excel", disabled=True, use_container_width=True)
 
         st.markdown("---")
-        stored_gsheet_url = db.get("google_sheet_url", "")
-        gsheet_url_input = st.text_input(
-            "Lien de votre Google Sheet :", 
-            value=stored_gsheet_url,
-            placeholder="https://docs.google.com/spreadsheets/d/1A2B3C4D.../edit"
-        )
 
-        col_sync1, col_sync2 = st.columns(2)
-        with col_sync1:
-            if st.button("📥 Synchroniser depuis Google Sheets", type="primary", use_container_width=True):
-                if not gsheet_url_input:
-                    st.error("Veuillez renseigner l'URL de votre Google Sheet.")
-                else:
-                    match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", gsheet_url_input)
-                    if not match:
-                        st.error("URL invalide. Doit contenir '/spreadsheets/d/...'")
-                    else:
-                        sheet_id = match.group(1)
-                        with st.spinner("Synchronisation en cours depuis Google Sheets..."):
-                            try:
-                                def fetch_sheet(name, required=True):
-                                    try:
-                                        enc_name = urllib.parse.quote(name)
-                                        u = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={enc_name}"
-                                        df_res = pd.read_csv(u)
-                                        return df_res
-                                    except Exception as ex:
-                                        if required:
-                                            raise ex
-                                        return pd.DataFrame()
+        # 4. GUIDE DÉPLIABLE AVEC LE CODE GOOGLE APPS SCRIPT
+        with st.expander("📖 Guide d'installation en 2 minutes : Activer la mise à jour en direct dans Google Sheets"):
+            st.markdown("""
+            ### 🛠️ Comment activer la synchronisation automatique en direct ?
 
-                                df_r = fetch_sheet("Rondes")
-                                df_m = fetch_sheet("Membres")
-                                df_rc = fetch_sheet("Rencontres")
-                                df_im = fetch_sheet("Imaginaire", required=False)
-                                df_sp = fetch_sheet("Supports", required=False)
-                                df_d = fetch_sheet("Deroules", required=False)
-                                df_mat = fetch_sheet("Materiels", required=False)
-                                df_u_sheet = fetch_sheet("Utilisateurs", required=False)
+            Google Sheets protège ses classeurs et interdit l'écriture directe sans autorisation. 
+            Pour permettre à votre application Streamlit de mettre à jour votre Google Sheet en direct sans compte Google Cloud payant ni configuration complexe, il suffit d'ajouter un **micro-script gratuit (Google Apps Script)** dans votre classeur.
 
-                                new_rondes = []
-                                for _, row_r in df_r.iterrows():
-                                    rid = safe_int(row_r["id"])
-                                    r_membres = []
-                                    for _, row_m in df_m[df_m["ronde_id"] == rid].iterrows():
-                                        r_membres.append({
-                                            "id": safe_int(row_m["id"]),
-                                            "prenom": str(row_m.get("prenom", "")),
-                                            "nom": str(row_m.get("nom", "")),
-                                            "role": str(row_m.get("role", "Enfant")),
-                                            "contact": str(row_m.get("contact", "")) if pd.notna(row_m.get("contact")) else "",
-                                            "photo": str(row_m.get("photo", "")) if pd.notna(row_m.get("photo")) else ""
-                                        })
+            #### Étape 1 : Ouvrir votre Google Sheet
+            1. Créez un Google Sheet (ou importez le fichier Excel téléchargé ci-dessus dans votre Google Drive).
+            2. Dans le menu de votre Google Sheet, cliquez sur **Extensions** > **Apps Script**.
 
-                                    r_rencontres = []
-                                    for _, row_rc in df_rc[df_rc["ronde_id"] == rid].iterrows():
-                                        rc_id = safe_int(row_rc["id"])
-                                        
-                                        # Parsing deroule
-                                        deroule_val = row_rc.get("deroule_json", "[]")
-                                        try:
-                                            deroule_parsed = json.loads(deroule_val) if isinstance(deroule_val, str) and deroule_val.strip() else []
-                                        except Exception:
-                                            deroule_parsed = []
-                                            
-                                        # Enrichissement depuis la feuille Deroules si deroule_json est vide
-                                        if not deroule_parsed and not df_d.empty and "rencontre_id" in df_d.columns:
-                                            sub_d = df_d[(df_d["ronde_id"] == rid) & (df_d["rencontre_id"] == rc_id)]
-                                            if not sub_d.empty:
-                                                for _, row_d in sub_d.iterrows():
-                                                    mats = str(row_d.get("materiels", ""))
-                                                    mat_list = [x.strip() for x in mats.split(",") if x.strip()] if mats and mats != "nan" else []
-                                                    deroule_parsed.append({
-                                                        "date": str(row_d.get("date", "")) if pd.notna(row_d.get("date")) else "",
-                                                        "heure_debut": str(row_d.get("heure_debut", "")) if pd.notna(row_d.get("heure_debut")) else "",
-                                                        "heure_fin": str(row_d.get("heure_fin", "")) if pd.notna(row_d.get("heure_fin")) else "",
-                                                        "activite": str(row_d.get("activite", "")) if pd.notna(row_d.get("activite")) else "",
-                                                        "animateur": str(row_d.get("animateur", "")) if pd.notna(row_d.get("animateur")) else "",
-                                                        "commentaire": str(row_d.get("commentaire", "")) if pd.notna(row_d.get("commentaire")) else "",
-                                                        "materiels": mat_list
-                                                    })
+            #### Étape 2 : Coller le script de synchronisation
+            3. Effacez le code existant dans la fenêtre Apps Script et collez exactement le code suivant :
+            """)
 
-                                        # Parsing colonnes personnalisées
-                                        col_d_val = row_rc.get("colonnes_deroule_json", "[]")
-                                        try:
-                                            colonnes_parsed = json.loads(col_d_val) if isinstance(col_d_val, str) and col_d_val.strip() else []
-                                        except Exception:
-                                            colonnes_parsed = []
+            apps_script_code = """// ====================================================================
+// SCRIPT DE SYNCHRONISATION EN DIRECT APPSCOUT <-> GOOGLE SHEETS
+// À coller dans : Google Sheets > Extensions > Apps Script
+// Déployer en : Application Web (Exécuter en tant que : Moi, Accès : Tout le monde)
+// ====================================================================
 
-                                        # Parsing materiels
-                                        mat_val = row_rc.get("materiels_json", "[]")
-                                        try:
-                                            mat_parsed = json.loads(mat_val) if isinstance(mat_val, str) and mat_val.strip() else []
-                                        except Exception:
-                                            mat_parsed = []
+function doPost(e) {
+  try {
+    var contents = JSON.parse(e.postData.contents);
+    var tables = contents.tables || contents;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Mettre à jour chaque feuille reçue
+    for (var sheetName in tables) {
+      var rows = tables[sheetName];
+      if (!rows || !Array.isArray(rows) || rows.length === 0) continue;
+      
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        sheet = ss.insertSheet(sheetName);
+      }
+      
+      sheet.clearContents();
+      
+      var headers = Object.keys(rows[0]);
+      var matrix = [headers];
+      for (var i = 0; i < rows.length; i++) {
+        var row = [];
+        for (var j = 0; j < headers.length; j++) {
+          var val = rows[i][headers[j]];
+          if (val === null || val === undefined) val = "";
+          row.push(val);
+        }
+        matrix.push(row);
+      }
+      sheet.getRange(1, 1, matrix.length, headers.length).setValues(matrix);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Toutes les tables ont été mises à jour en direct !",
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
 
-                                        # Enrichissement depuis la feuille Materiels si materiels_json est vide
-                                        if not mat_parsed and not df_mat.empty and "rencontre_id" in df_mat.columns:
-                                            sub_mat = df_mat[(df_mat["ronde_id"] == rid) & (df_mat["rencontre_id"] == rc_id)]
-                                            if not sub_mat.empty:
-                                                for _, row_mat in sub_mat.iterrows():
-                                                    mat_parsed.append({
-                                                        "id": safe_int(row_mat.get("materiel_id", 1)),
-                                                        "nom": str(row_mat.get("nom", "")) if pd.notna(row_mat.get("nom")) else "",
-                                                        "qui_amene": str(row_mat.get("qui_amene", "")) if pd.notna(row_mat.get("qui_amene")) else "",
-                                                        "photo": str(row_mat.get("photo", "")) if pd.notna(row_mat.get("photo")) else ""
-                                                    })
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = ss.getSheets();
+    var tables = {};
+    
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      var name = sheet.getName();
+      var data = sheet.getDataRange().getValues();
+      if (data.length < 2) {
+        tables[name] = [];
+        continue;
+      }
+      var headers = data[0];
+      var rows = [];
+      for (var r = 1; r < data.length; r++) {
+        var rowObj = {};
+        for (var c = 0; c < headers.length; c++) {
+          rowObj[headers[c]] = data[r][c];
+        }
+        rows.push(rowObj);
+      }
+      tables[name] = rows;
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      tables: tables,
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}"""
+            st.code(apps_script_code, language="javascript")
 
-                                        # Coordonnées GPS & adresse (supporte formats avec virgules ou points)
-                                        lat_val = safe_float(row_rc.get("lat"), 48.9417)
-                                        lon_val = safe_float(row_rc.get("lon"), 2.1645)
-                                        lieu_adr = str(row_rc.get("lieu_adresse", row_rc.get("lieu", ""))) if pd.notna(row_rc.get("lieu_adresse")) else str(row_rc.get("lieu", ""))
+            st.markdown("""
+            #### Étape 3 : Déployer en Application Web
+            4. Cliquez sur le bouton bleu **Déployer** (en haut à droite) > **Nouveau déploiement**.
+            5. Cliquez sur l'icône **Engrenage ⚙️** à gauche de « Sélectionner un type » et choisissez **Application Web**.
+            6. Renseignez les paramètres suivants :
+               * **Description** : *AppScout Live Sync*
+               * **Exécuter en tant que** : **Moi (votre adresse e-mail)**
+               * **Qui a accès** : **Tout le monde** *(Anyone)*
+            7. Cliquez sur **Déployer**, autorisez les accès Google si demandé, puis **copiez l'URL de l'application Web** qui se termine par `/exec`.
 
-                                        r_rencontres.append({
-                                            "id": rc_id,
-                                            "titre": str(row_rc.get("titre", "")),
-                                            "type": str(row_rc.get("type", "Rencontre ronde")),
-                                            "date": str(row_rc.get("date", "")),
-                                            "horaire": str(row_rc.get("horaire", "14:00 - 17:00")),
-                                            "lieu": str(row_rc.get("lieu", "")),
-                                            "lieu_adresse": lieu_adr,
-                                            "lat": lat_val,
-                                            "lon": lon_val,
-                                            "animateur": str(row_rc.get("animateur", "")) if pd.notna(row_rc.get("animateur")) else "",
-                                            "statut": str(row_rc.get("statut", "À venir")),
-                                            "description": str(row_rc.get("description", "")) if pd.notna(row_rc.get("description")) else "",
-                                            "imaginaire_rencontre": str(row_rc.get("imaginaire_rencontre", "")) if pd.notna(row_rc.get("imaginaire_rencontre")) else "",
-                                            "objectifs": str(row_rc.get("objectifs", "")) if pd.notna(row_rc.get("objectifs")) else "",
-                                            "photo": str(row_rc.get("photo", "")) if pd.notna(row_rc.get("photo")) else "",
-                                            "colonnes_deroule": colonnes_parsed,
-                                            "deroule": deroule_parsed,
-                                            "materiels": mat_parsed
-                                        })
+            #### Étape 4 : Coller l'URL dans l'application
+            8. Collez l'URL obtenue dans le champ **URL de l'Application Web Apps Script** ci-dessus et cliquez sur **💾 Enregistrer**.
+            9. Cliquez sur **🚀 Tester l'envoi immédiat vers Google Sheets** pour vérifier la connexion.
 
-                                    # Imaginaire de ronde
-                                    im_text = ""
-                                    im_titre = "L'Aventure des Farfadets"
-                                    im_photos = []
-                                    if not df_im.empty:
-                                        im_sub = df_im[df_im["ronde_id"] == rid]
-                                        if not im_sub.empty:
-                                            im_text = str(im_sub.iloc[0]["texte"]) if pd.notna(im_sub.iloc[0].get("texte")) else ""
-                                            if "titre" in im_sub.columns and pd.notna(im_sub.iloc[0].get("titre")):
-                                                im_titre = str(im_sub.iloc[0]["titre"])
-                                            if "photos_json" in im_sub.columns and pd.notna(im_sub.iloc[0].get("photos_json")):
-                                                try:
-                                                    im_photos = json.loads(str(im_sub.iloc[0]["photos_json"]))
-                                                except Exception:
-                                                    im_photos = []
+            > 💡 **Astuce Streamlit Cloud** : Pour que l'URL survive même si vous supprimez votre dépôt Git, vous pouvez également l'ajouter dans vos secrets Streamlit Cloud (*Settings > Secrets*) sous la clé `GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/.../exec"`.
+            """)
 
-                                    # Supports
-                                    r_supports = []
-                                    if not df_sp.empty:
-                                        for _, row_sp in df_sp[df_sp["ronde_id"] == rid].iterrows():
-                                            r_supports.append({
-                                                "id": safe_int(row_sp["id"]),
-                                                "titre": str(row_sp.get("titre", "")),
-                                                "url": str(row_sp.get("url", "")),
-                                                "categorie": str(row_sp.get("categorie", "Pédagogie")),
-                                                "desc": str(row_sp.get("desc", "")) if pd.notna(row_sp.get("desc")) else ""
-                                            })
-
-                                    new_rondes.append({
-                                        "id": rid,
-                                        "nom": str(row_r.get("nom", "")),
-                                        "saison": str(row_r.get("saison", "")),
-                                        "groupe": str(row_r.get("groupe", "")),
-                                        "peuplade": str(row_r.get("peuplade", "Branche scoute des 6 - 8 ans et leurs parents")),
-                                        "lieu_habituel": str(row_r.get("lieu_habituel", "")),
-                                        "membres": r_membres,
-                                        "rencontres": [normalize_rencontre_data(rc) for rc in r_rencontres],
-                                        "imaginaire": im_text,
-                                        "imaginaire_titre": im_titre,
-                                        "imaginaire_photos": im_photos,
-                                        "supports": r_supports
-                                    })
-
-                                if new_rondes:
-                                    db["rondes"] = new_rondes
-                                    db["active_ronde_id"] = new_rondes[0]["id"]
-                                    st.session_state["active_ronde_id"] = new_rondes[0]["id"]
-                                    db["google_sheet_url"] = gsheet_url_input
-                                    
-                                    # Utilisateurs (si feuille présente)
-                                    if not df_u_sheet.empty and "email" in df_u_sheet.columns:
-                                        imported_users = []
-                                        for _, row_u in df_u_sheet.iterrows():
-                                            u_email = str(row_u.get("email", "")).strip()
-                                            if not u_email or u_email == "nan":
-                                                continue
-                                            existing_u = next((u for u in db.get("utilisateurs", []) if u.get("email", "").strip().lower() == u_email.lower()), None)
-                                            pwd_hash = existing_u.get("mot_de_passe") if existing_u else hash_password("scout123")
-                                            u_id = safe_int(row_u.get("id")) if pd.notna(row_u.get("id")) else (existing_u.get("id") if existing_u else len(imported_users) + 1)
-                                            r_auth_str = str(row_u.get("rondes_autorisees", ""))
-                                            try:
-                                                r_auth = [int(x.strip()) for x in r_auth_str.split(",") if x.strip().isdigit()]
-                                            except Exception:
-                                                r_auth = [new_rondes[0]["id"]]
-                                            if not r_auth:
-                                                r_auth = [new_rondes[0]["id"]]
-                                            imported_users.append({
-                                                "id": u_id,
-                                                "prenom": str(row_u.get("prenom", "")),
-                                                "nom": str(row_u.get("nom", "")),
-                                                "email": u_email,
-                                                "mot_de_passe": pwd_hash,
-                                                "role": str(row_u.get("role", "parent")).lower(),
-                                                "membre_id": safe_int(row_u.get("membre_id"), 1),
-                                                "rondes_autorisees": r_auth
-                                            })
-                                        if imported_users:
-                                            db["utilisateurs"] = imported_users
-
-                                    save_data(db)
-                                    st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
-                                    st.session_state["flash_success"] = "✅ Synchronisation réussie avec Google Sheets (toutes les tables à jour) !"
-                                    st.rerun()
-                                else:
-                                    st.error("Aucune ronde trouvée dans le Google Sheet.")
-                            except Exception as e:
-                                st.error(f"Erreur de synchronisation : {e}")
-
-        with col_sync2:
-            if st.button("📤 Régénérer le fichier Excel miroir sur le disque", use_container_width=True):
-                try:
-                    build_excel_export_bytes(db, save_path=excel_path)
-                    st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
-                    st.session_state["flash_success"] = "✅ Fichier Excel miroir régénéré avec succès avec toutes les données actuelles du site (9 onglets synchronisés) !"
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erreur : {e}")
+        # 5. LIEN GOOGLE SHEET CLASSIQUE (LECTURE SEULE / CONSULTATION)
+        with st.expander("🔗 Optionnel : Lien de consultation direct vers le Google Sheet"):
+            stored_gsheet_url = db.get("google_sheet_url", "")
+            g_url_in = st.text_input(
+                "Lien direct de consultation de votre Google Sheet :",
+                value=stored_gsheet_url,
+                placeholder="https://docs.google.com/spreadsheets/d/1A2B3C4D.../edit"
+            )
+            if st.button("Enregistrer le lien de consultation"):
+                db["google_sheet_url"] = g_url_in.strip()
+                save_data(db)
+                st.session_state["parametres_tab"] = "☁️ Synchronisation Google Sheets"
+                st.session_state["flash_success"] = "✅ Lien du Google Sheet enregistré !"
+                st.rerun()
