@@ -84,6 +84,21 @@ def parse_date_obj(d_input, default_today=True):
     except Exception:
         return date.today() if default_today else None
 
+def add_minutes_to_time_str(time_str, minutes=30):
+    if not time_str or not str(time_str).strip():
+        return "14:30"
+    t_clean = str(time_str).strip().replace("h", ":").replace("H", ":")
+    try:
+        parts = t_clean.split(":")
+        h = int(parts[0])
+        m = int(parts[1]) if len(parts) > 1 and parts[1].strip() else 0
+        total_m = h * 60 + m + minutes
+        new_h = (total_m // 60) % 24
+        new_m = total_m % 60
+        return f"{new_h:02d}:{new_m:02d}"
+    except Exception:
+        return "15:00"
+
 def file_to_base64(uploaded_file):
     if uploaded_file is not None:
         b64 = base64.b64encode(uploaded_file.getvalue()).decode()
@@ -1541,6 +1556,9 @@ def dialog_modifier_rencontre(rencontre_id):
 
         cur_edit_step_key = f"editing_step_idx_{rencontre_id}"
         cur_add_step_key = f"adding_step_{rencontre_id}"
+        cur_insert_pos_key = f"insert_pos_idx_{rencontre_id}"
+        cur_suggested_deb_key = f"suggested_deb_{rencontre_id}"
+        cur_suggested_fin_key = f"suggested_fin_{rencontre_id}"
         editing_idx = st.session_state.get(cur_edit_step_key, None)
         is_adding = st.session_state.get(cur_add_step_key, False)
 
@@ -1572,6 +1590,24 @@ def dialog_modifier_rencontre(rencontre_id):
                     avail_mats = list(set(mat_noms + current_step_mats))
                     m_s_mats = st.multiselect("Matériels", options=avail_mats, default=[x for x in current_step_mats if x in avail_mats])
                     m_s_com = st.text_input("Commentaire / Consigne", value=cur_s.get("commentaire", ""))
+
+                    # Choix de la position dans le déroulé si plusieurs étapes existent
+                    m_s_pos = editing_idx
+                    if len(deroule_list) > 1:
+                        pos_choices = []
+                        for p_i in range(len(deroule_list)):
+                            if p_i == editing_idx:
+                                pos_choices.append((p_i, f"Position #{p_i+1} (actuelle)"))
+                            else:
+                                p_act = deroule_list[p_i].get("activite", f"Étape {p_i+1}")
+                                pos_choices.append((p_i, f"Position #{p_i+1} (à la place de '{p_act}')"))
+                        m_s_pos = st.selectbox(
+                            "📍 Déplacer à la position :",
+                            options=[p[0] for p in pos_choices],
+                            format_func=lambda x: next(p[1] for p in pos_choices if p[0] == x),
+                            index=editing_idx,
+                            help="Déplacez cette activité à une autre position dans la chronologie de la rencontre."
+                        )
 
                 c_ms_a1, c_ms_a2 = st.columns([1.6, 1])
                 with c_ms_a1:
@@ -1620,6 +1656,11 @@ def dialog_modifier_rencontre(rencontre_id):
                         cur_s["commentaire"] = m_s_com
                         for cname, cval in m_custom_vals.items():
                             cur_s[cname] = cval
+                        
+                        if len(deroule_list) > 1 and m_s_pos != editing_idx:
+                            moved_step = deroule_list.pop(editing_idx)
+                            deroule_list.insert(m_s_pos, moved_step)
+
                         save_data(db)
                         st.session_state[cur_edit_step_key] = None
                         st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
@@ -1637,27 +1678,87 @@ def dialog_modifier_rencontre(rencontre_id):
                 st.session_state["flash_success"] = "✅ Étape retirée du déroulé."
                 st.rerun()
 
-        # ÉCRAN 2 : SAISIE POUR AJOUTER UNE NOUVELLE LIGNE AU TABLEAU
+        # ÉCRAN 2 : SAISIE POUR AJOUTER OU INTERCALER UNE NOUVELLE ACTIVITÉ
         elif is_adding:
+            cur_ins_pos = st.session_state.get(cur_insert_pos_key, len(deroule_list))
+            if not isinstance(cur_ins_pos, int) or cur_ins_pos < 0 or cur_ins_pos > len(deroule_list):
+                cur_ins_pos = len(deroule_list)
+
+            # Heures par défaut suggérées
+            custom_deb = st.session_state.get(cur_suggested_deb_key, None)
+            custom_fin = st.session_state.get(cur_suggested_fin_key, None)
+
+            if custom_deb:
+                def_h_deb = custom_deb
+                def_h_fin = custom_fin if custom_fin else add_minutes_to_time_str(def_h_deb, 30)
+            elif deroule_list:
+                if cur_ins_pos == 0:
+                    def_h_deb = deroule_list[0].get("heure_debut", "14:00")
+                    def_h_fin = add_minutes_to_time_str(def_h_deb, 30)
+                else:
+                    prev_s = deroule_list[min(cur_ins_pos - 1, len(deroule_list) - 1)]
+                    def_h_deb = prev_s.get("heure_fin", "14:00")
+                    def_h_fin = add_minutes_to_time_str(def_h_deb, 30)
+            else:
+                def_h_deb = "14:00"
+                def_h_fin = "14:30"
+
             c_back, c_title = st.columns([1.2, 4])
             with c_back:
                 if st.button("← Retour au tableau", key=f"btn_back_step_add_{rencontre_id}", use_container_width=True):
                     st.session_state[cur_add_step_key] = False
+                    st.session_state[cur_insert_pos_key] = None
+                    st.session_state[cur_suggested_deb_key] = None
+                    st.session_state[cur_suggested_fin_key] = None
                     st.rerun()
             with c_title:
-                st.markdown(f"##### ➕ Ajouter une nouvelle étape à la suite du tableau")
+                if deroule_list and cur_ins_pos < len(deroule_list):
+                    if cur_ins_pos == 0:
+                        first_act = deroule_list[0].get('activite', 'Étape #1')
+                        st.markdown(f"##### ➕ Intercaler une nouvelle activité **au tout début** (avant *'{first_act}'*)")
+                    else:
+                        prev_act = deroule_list[cur_ins_pos - 1].get('activite', f'Étape #{cur_ins_pos}')
+                        st.markdown(f"##### ➕ Intercaler une nouvelle activité après l'étape #{cur_ins_pos} : **{prev_act}**")
+                else:
+                    st.markdown("##### ➕ Ajouter une nouvelle étape au déroulé")
 
             add_s_def_sel, add_s_def_oth = parse_animators_string(r.get("animateur", ""), adult_opts, comm_opts)
-            with st.form(f"form_add_step_{rencontre_id}", clear_on_submit=True):
+            with st.form(f"form_add_step_{rencontre_id}_{cur_ins_pos}", clear_on_submit=True):
+                # Si le déroulé contient déjà des activités, proposer le choix d'emplacement pour intercaler
+                step_pos_choice = cur_ins_pos
+                if deroule_list:
+                    pos_options = []
+                    pos_options.append((0, f"⭐ Au tout début (en 1ère position, avant '{deroule_list[0].get('activite', 'Étape 1')}')"))
+                    for i_pos, s_item in enumerate(deroule_list):
+                        s_name = s_item.get("activite", f"Étape {i_pos+1}")
+                        if i_pos == len(deroule_list) - 1:
+                            pos_options.append((i_pos + 1, f"📌 À la fin du déroulé (après l'étape #{i_pos+1} : {s_name})"))
+                        else:
+                            pos_options.append((i_pos + 1, f"👉 Intercaler après l'étape #{i_pos+1} : {s_name}"))
+
+                    def_opt_idx = len(pos_options) - 1
+                    for o_idx, (p_val, _) in enumerate(pos_options):
+                        if p_val == cur_ins_pos:
+                            def_opt_idx = o_idx
+                            break
+
+                    step_pos_choice = st.selectbox(
+                        "📍 Emplacement dans le déroulé chronologique :",
+                        options=[o[0] for o in pos_options],
+                        format_func=lambda x: next(o[1] for o in pos_options if o[0] == x),
+                        index=def_opt_idx,
+                        help="Sélectionnez l'emplacement exact où intercaler cette nouvelle activité."
+                    )
+
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
                     step_date = st.date_input("Date de l'étape", value=parse_date_obj(r.get("date", date.today())), format="DD/MM/YYYY")
                     step_act = st.text_input("Nom de l'activité *", placeholder="Ex : Grand jeu de piste")
                     c_sth1, c_sth2 = st.columns(2)
                     with c_sth1:
-                        step_h_deb = st.text_input("Heure début *", value="14:00")
+                        step_h_deb = st.text_input("Heure début *", value=def_h_deb)
                     with c_sth2:
-                        step_h_fin = st.text_input("Heure fin *", value="14:30")
+                        step_h_fin = st.text_input("Heure fin *", value=def_h_fin)
                 with col_s2:
                     step_mats = st.multiselect("Matériels nécessaires", options=mat_noms if mat_noms else ["Foulards", "Goûter", "Boussoles"])
                     step_com = st.text_input("Commentaire / Consigne d'animation", placeholder="Ex : Diviser la ronde en deux équipes")
@@ -1688,12 +1789,16 @@ def dialog_modifier_rencontre(rencontre_id):
 
                 col_b1, col_b2 = st.columns([3, 1])
                 with col_b1:
-                    sub_add = st.form_submit_button("➕ Valider et ajouter la ligne au tableau", type="primary", use_container_width=True)
+                    sub_add_label = "➕ Valider et intercaler l'activité" if (deroule_list and step_pos_choice < len(deroule_list)) else "➕ Valider et ajouter la ligne au tableau"
+                    sub_add = st.form_submit_button(sub_add_label, type="primary", use_container_width=True)
                 with col_b2:
                     sub_canc_add = st.form_submit_button("Annuler", use_container_width=True)
 
                 if sub_canc_add:
                     st.session_state[cur_add_step_key] = False
+                    st.session_state[cur_insert_pos_key] = None
+                    st.session_state[cur_suggested_deb_key] = None
+                    st.session_state[cur_suggested_fin_key] = None
                     st.rerun()
 
                 if sub_add:
@@ -1711,12 +1816,21 @@ def dialog_modifier_rencontre(rencontre_id):
                         }
                         for cname, cval in new_custom_vals.items():
                             new_step[cname] = cval
-                        r.setdefault("deroule", []).append(new_step)
+
+                        target_pos = step_pos_choice if deroule_list else 0
+                        if target_pos >= len(deroule_list):
+                            r.setdefault("deroule", []).append(new_step)
+                        else:
+                            r.setdefault("deroule", []).insert(target_pos, new_step)
+
                         save_data(db)
                         st.session_state[cur_add_step_key] = False
+                        st.session_state[cur_insert_pos_key] = None
+                        st.session_state[cur_suggested_deb_key] = None
+                        st.session_state[cur_suggested_fin_key] = None
                         st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                         st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                        st.session_state["flash_success"] = f"✅ Étape '{step_act}' ajoutée au déroulé !"
+                        st.session_state["flash_success"] = f"✅ Activité '{step_act}' insérée au déroulé !"
                         st.rerun()
 
         # ÉCRAN 3 : AFFICHAGE DU TABLEAU AVEC ACTIONS SUR CHAQUE LIGNE ET BOUTON D'AJOUT À LA SUITE
@@ -1757,11 +1871,11 @@ def dialog_modifier_rencontre(rencontre_id):
                     <div style="background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px 8px 0 0; padding:10px 12px; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:4px;">
                         <div style="display:flex; align-items:center;">
                             <div style="width:6%;">#</div>
-                            <div style="width:16%;">Horaires</div>
-                            <div style="width:26%;">Activité & Détails</div>
-                            <div style="width:16%;">Animateur</div>
-                            <div style="width:18%;">Matériels</div>
-                            <div style="width:18%; text-align:right;">Actions</div>
+                            <div style="width:15%;">Horaires</div>
+                            <div style="width:25%;">Activité & Détails</div>
+                            <div style="width:14%;">Animateur</div>
+                            <div style="width:16%;">Matériels</div>
+                            <div style="width:24%; text-align:right;">Actions & Organisation</div>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -1769,7 +1883,7 @@ def dialog_modifier_rencontre(rencontre_id):
                 for idx, s in enumerate(deroule_list):
                     c_row = st.container()
                     with c_row:
-                        c_num, c_hor, c_act, c_anim, c_mat, c_btn = st.columns([0.6, 1.5, 2.4, 1.4, 1.6, 1.7])
+                        c_num, c_hor, c_act, c_anim, c_mat, c_btn = st.columns([0.5, 1.4, 2.3, 1.3, 1.4, 2.3])
                         with c_num:
                             st.markdown(f"**#{idx + 1}**")
                         with c_hor:
@@ -1793,14 +1907,52 @@ def dialog_modifier_rencontre(rencontre_id):
                             else:
                                 st.caption("Aucun")
                         with c_btn:
-                            cb1, cb2 = st.columns([2, 1])
+                            cb1, cb2 = st.columns([1, 1])
                             with cb1:
-                                if st.button("✏️ Modifier", key=f"btn_edit_step_line_{rencontre_id}_{idx}", use_container_width=True):
+                                if st.button("✏️ Modifier", key=f"btn_edit_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Modifier cette étape"):
                                     st.session_state[cur_edit_step_key] = idx
                                     st.session_state[cur_add_step_key] = False
                                     st.rerun()
                             with cb2:
-                                if st.button("🗑️", key=f"btn_del_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Supprimer cette étape"):
+                                if st.button("➕ Intercaler", key=f"btn_ins_step_line_{rencontre_id}_{idx}", use_container_width=True, help=f"Intercaler une activité après '{s.get('activite', '')}'"):
+                                    st.session_state[cur_add_step_key] = True
+                                    st.session_state[cur_edit_step_key] = None
+                                    st.session_state[cur_insert_pos_key] = idx + 1
+                                    st.session_state[cur_suggested_deb_key] = s.get("heure_fin", "14:00")
+                                    st.session_state[cur_suggested_fin_key] = add_minutes_to_time_str(s.get("heure_fin", "14:00"), 30)
+                                    st.rerun()
+
+                            if len(deroule_list) > 1:
+                                cm1, cm2, cm3 = st.columns([1, 1, 1])
+                                with cm1:
+                                    if st.button("⬆️", key=f"btn_up_step_{rencontre_id}_{idx}", use_container_width=True, help="Monter d'un rang", disabled=(idx == 0)):
+                                        deroule_list[idx], deroule_list[idx - 1] = deroule_list[idx - 1], deroule_list[idx]
+                                        r["deroule"] = deroule_list
+                                        save_data(db)
+                                        st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                                        st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                                        st.session_state["flash_success"] = f"⬆️ Activité '{s.get('activite')}' déplacée vers le haut !"
+                                        st.rerun()
+                                with cm2:
+                                    if st.button("⬇️", key=f"btn_down_step_{rencontre_id}_{idx}", use_container_width=True, help="Descendre d'un rang", disabled=(idx == len(deroule_list) - 1)):
+                                        deroule_list[idx], deroule_list[idx + 1] = deroule_list[idx + 1], deroule_list[idx]
+                                        r["deroule"] = deroule_list
+                                        save_data(db)
+                                        st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                                        st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                                        st.session_state["flash_success"] = f"⬇️ Activité '{s.get('activite')}' déplacée vers le bas !"
+                                        st.rerun()
+                                with cm3:
+                                    if st.button("🗑️", key=f"btn_del_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Supprimer cette étape"):
+                                        deroule_list.pop(idx)
+                                        r["deroule"] = deroule_list
+                                        save_data(db)
+                                        st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                                        st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                                        st.session_state["flash_success"] = "🗑️ Étape supprimée."
+                                        st.rerun()
+                            else:
+                                if st.button("🗑️ Supprimer", key=f"btn_del_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Supprimer cette étape"):
                                     deroule_list.pop(idx)
                                     r["deroule"] = deroule_list
                                     save_data(db)
@@ -1808,16 +1960,39 @@ def dialog_modifier_rencontre(rencontre_id):
                                     st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
                                     st.session_state["flash_success"] = "🗑️ Étape supprimée."
                                     st.rerun()
+
                         st.markdown('<hr style="margin:4px 0 8px 0; border:0; border-top:1px solid #E2E8F0;">', unsafe_allow_html=True)
             else:
                 st.info("Aucune étape dans le déroulé de cette rencontre.")
 
-            # BOUTON AJOUTER À LA SUITE DU TABLEAU
+            # BOUTONS AJOUTER / INTERCALER
             st.write("")
-            if st.button("➕ Ajouter une étape à la suite du tableau", type="primary", use_container_width=True, key=f"btn_trigger_add_step_{rencontre_id}"):
-                st.session_state[cur_add_step_key] = True
-                st.session_state[cur_edit_step_key] = None
-                st.rerun()
+            if deroule_list:
+                c_add_btn1, c_add_btn2 = st.columns([1.6, 1])
+                with c_add_btn1:
+                    if st.button("➕ Ajouter une étape à la fin du déroulé", type="primary", use_container_width=True, key=f"btn_trigger_add_step_{rencontre_id}"):
+                        st.session_state[cur_add_step_key] = True
+                        st.session_state[cur_insert_pos_key] = len(deroule_list)
+                        st.session_state[cur_suggested_deb_key] = deroule_list[-1].get("heure_fin", "14:00")
+                        st.session_state[cur_suggested_fin_key] = add_minutes_to_time_str(deroule_list[-1].get("heure_fin", "14:00"), 30)
+                        st.session_state[cur_edit_step_key] = None
+                        st.rerun()
+                with c_add_btn2:
+                    if st.button("⭐ Intercaler en 1ère position", type="secondary", use_container_width=True, key=f"btn_trigger_insert_top_{rencontre_id}", help="Intercaler une activité au tout début de la rencontre"):
+                        st.session_state[cur_add_step_key] = True
+                        st.session_state[cur_insert_pos_key] = 0
+                        st.session_state[cur_suggested_deb_key] = deroule_list[0].get("heure_debut", "14:00")
+                        st.session_state[cur_suggested_fin_key] = add_minutes_to_time_str(deroule_list[0].get("heure_debut", "14:00"), 30)
+                        st.session_state[cur_edit_step_key] = None
+                        st.rerun()
+            else:
+                if st.button("➕ Ajouter la première étape au déroulé", type="primary", use_container_width=True, key=f"btn_trigger_add_step_{rencontre_id}"):
+                    st.session_state[cur_add_step_key] = True
+                    st.session_state[cur_insert_pos_key] = 0
+                    st.session_state[cur_suggested_deb_key] = "14:00"
+                    st.session_state[cur_suggested_fin_key] = "14:30"
+                    st.session_state[cur_edit_step_key] = None
+                    st.rerun()
 
             # ZONE NOTES / COMPTE-RENDU DE LA RENCONTRE (Retour d'expérience après la séance)
             st.write("")
