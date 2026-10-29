@@ -11,6 +11,7 @@ import io
 import urllib.parse
 import requests
 import threading
+import copy
 
 # Configuration de la page
 st.set_page_config(
@@ -496,17 +497,39 @@ def push_to_google_sheet(database_obj, webhook_url=None):
     except Exception as e:
         return False, f"Erreur de communication : {e}"
 
+def _background_async_sync(database_copy):
+    """
+    Tâche d'arrière-plan exécutée dans un thread séparé :
+    1. Envoi asynchrone vers Google Sheets via Webhook.
+    2. Mise à jour du fichier miroir Excel local.
+    """
+    # 1. Envoi vers Google Sheets en direct
+    try:
+        url = get_google_sheet_webhook_url(database_copy)
+        auto_sync = database_copy.get("google_sheet_auto_sync", True)
+        if url and auto_sync:
+            push_to_google_sheet(database_copy, url)
+    except Exception:
+        pass
+
+    # 2. Mise à jour du miroir Excel local sur disque
+    try:
+        excel_mirror_path = os.path.join(os.path.dirname(__file__), "Modele_Google_Sheets_Ronde_Farfadets.xlsx")
+        build_excel_export_bytes(database_copy, save_path=excel_mirror_path)
+    except Exception:
+        pass
+
 def push_to_google_sheet_async(database_obj):
     """
-    Lance l'envoi vers Google Sheets en arrière-plan dans un thread détaché
+    Lance l'envoi vers Google Sheets et la mise à jour Excel en arrière-plan dans un thread détaché
     pour ne jamais ralentir ou bloquer l'expérience utilisateur.
     """
-    url = get_google_sheet_webhook_url(database_obj)
-    auto_sync = database_obj.get("google_sheet_auto_sync", True)
-    if not url or not auto_sync:
-        return
-    t = threading.Thread(target=push_to_google_sheet, args=(database_obj, url), daemon=True)
-    t.start()
+    try:
+        db_copy = copy.deepcopy(database_obj)
+        t = threading.Thread(target=_background_async_sync, args=(db_copy,), daemon=True)
+        t.start()
+    except Exception:
+        pass
 
 def fetch_from_google_sheet_webhook(webhook_url):
     """
@@ -767,20 +790,25 @@ def load_data():
     raw.setdefault("google_sheet_auto_sync", True)
     raw.setdefault("google_sheet_webhook_url", "")
 
-    # Synchronisation initiale depuis Google Sheets si configuré (permet de récupérer les données après un redéploiement Git)
-    sync_url = get_google_sheet_webhook_url(raw)
-    if sync_url and raw.get("google_sheet_auto_sync", True):
-        try:
-            ok, dfs = fetch_from_google_sheet_webhook(sync_url)
-            if ok and "Rondes" in dfs and not dfs["Rondes"].empty:
-                raw = parse_and_apply_imported_tables(dfs, raw)
-                try:
-                    with open(DATA_FILE, "w", encoding="utf-8") as f:
-                        json.dump(raw, f, ensure_ascii=False, indent=2)
-                except Exception:
-                    pass
-        except Exception:
-            pass
+    # Restauration initiale depuis Google Sheets UNIQUEMENT au premier démarrage
+    # si le fichier local est vide ou sans rondes (ex: après un redéploiement Git).
+    # Ne s'exécute JAMAIS lors de la navigation entre les menus afin de garantir une réactivité instantanée.
+    try:
+        if "gsheet_boot_attempted" not in st.session_state:
+            st.session_state["gsheet_boot_attempted"] = True
+            if not raw.get("rondes") or len(raw.get("rondes", [])) == 0:
+                sync_url = get_google_sheet_webhook_url(raw)
+                if sync_url and raw.get("google_sheet_auto_sync", True):
+                    ok, dfs = fetch_from_google_sheet_webhook(sync_url)
+                    if ok and "Rondes" in dfs and not dfs["Rondes"].empty:
+                        raw = parse_and_apply_imported_tables(dfs, raw)
+                        try:
+                            with open(DATA_FILE, "w", encoding="utf-8") as f:
+                                json.dump(raw, f, ensure_ascii=False, indent=2)
+                        except Exception:
+                            pass
+    except Exception:
+        pass
 
     for ro in raw.get("rondes", []):
         ro.setdefault("imaginaire_photos", [])
@@ -795,13 +823,7 @@ def load_data():
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    # Met à jour le modèle Excel local sur disque en arrière-plan
-    try:
-        excel_mirror_path = os.path.join(os.path.dirname(__file__), "Modele_Google_Sheets_Ronde_Farfadets.xlsx")
-        build_excel_export_bytes(data, save_path=excel_mirror_path)
-    except Exception:
-        pass
-    # Synchronisation automatique en direct vers Google Sheets en arrière-plan
+    # Synchronisation automatique en direct vers Google Sheets & miroir Excel en tâche de fond (instantané et non-bloquant)
     push_to_google_sheet_async(data)
 
 db = load_data()
@@ -839,20 +861,57 @@ def get_current_ronde():
     save_data(db)
     return rondes[0]
 
+def get_initial_calendar_period(ronde_obj):
+    today = date.today()
+    rencontres = (ronde_obj.get("rencontres", []) if ronde_obj else [])
+    
+    # 1. Vérifier si des rencontres sont programmées ce mois-ci
+    cur_prefix = f"{today.year}-{today.month:02d}"
+    if any(parse_date_to_iso(r.get("date", "")).startswith(cur_prefix) for r in rencontres):
+        return today.year, today.month
+        
+    # 2. Sinon, trouver la prochaine rencontre à venir
+    upcoming = []
+    for r in rencontres:
+        d = parse_date_obj(r.get("date"), default_today=False)
+        if d and d >= today:
+            upcoming.append(d)
+    if upcoming:
+        upcoming.sort()
+        return upcoming[0].year, upcoming[0].month
+        
+    # 3. Sinon, première rencontre de la ronde
+    all_dates = []
+    for r in rencontres:
+        d = parse_date_obj(r.get("date"), default_today=False)
+        if d:
+            all_dates.append(d)
+    if all_dates:
+        all_dates.sort()
+        return all_dates[0].year, all_dates[0].month
+        
+    return today.year, today.month
+
 def switch_ronde(new_id):
     st.session_state["active_ronde_id"] = new_id
     db["active_ronde_id"] = new_id
     save_data(db)
+    r_target = next((r for r in db.get("rondes", []) if r["id"] == new_id), None)
+    if r_target:
+        y, m = get_initial_calendar_period(r_target)
+        st.session_state["cal_year"] = y
+        st.session_state["cal_month"] = m
     st.session_state["flash_success"] = f"✅ Vous êtes maintenant connecté à la ronde : {get_current_ronde().get('nom')}"
     st.rerun()
 
 current_ronde = get_current_ronde()
 
 # Variables d'état générales
+init_cal_y, init_cal_m = get_initial_calendar_period(current_ronde)
 if "cal_year" not in st.session_state:
-    st.session_state["cal_year"] = 2026
+    st.session_state["cal_year"] = init_cal_y
 if "cal_month" not in st.session_state:
-    st.session_state["cal_month"] = 10
+    st.session_state["cal_month"] = init_cal_m
 if "nav_page" not in st.session_state:
     st.session_state["nav_page"] = "🏠 Accueil"
 
@@ -1298,11 +1357,13 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 
 .cal-scroll-area {
-    max-height: 380px;
+    max-height: 460px;
     overflow-y: auto;
-    border: 1px solid #E5E7EB;
-    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
     margin-bottom: 14px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .cal-grid-table {
@@ -1313,14 +1374,16 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 
 .cal-grid-table th {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: #111827;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
     text-align: center;
     padding: 8px 2px;
-    border-bottom: 1px solid #E5E7EB;
-    border-right: 1px solid #E5E7EB;
-    background: #FAFAFA;
+    border-bottom: 1.5px solid #E2E8F0;
+    border-right: 1px solid #E2E8F0;
+    background: #F8FAFC;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 .cal-grid-table th:last-child {
     border-right: none;
@@ -1328,36 +1391,114 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 .cal-grid-table td {
     vertical-align: top;
-    height: 58px;
-    padding: 4px 5px;
-    border-bottom: 1px solid #E5E7EB;
-    border-right: 1px solid #E5E7EB;
+    height: 70px;
+    min-height: 70px;
+    padding: 5px 6px;
+    border-bottom: 1px solid #E2E8F0;
+    border-right: 1px solid #E2E8F0;
     background: #FFFFFF;
+    transition: all 0.15s ease;
 }
 .cal-grid-table td:last-child {
     border-right: none;
 }
 
+/* JOUR COURANT (AUJOURD'HUI) */
 .cal-grid-table td.today-cell {
     background-color: #FEFCE8 !important;
 }
 
+/* JOUR AVEC RENCONTRE (CASE VISUELLEMENT COLORISÉE EN BLEU SCOUT) */
+.cal-grid-table td.meeting-cell {
+    background: linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%) !important;
+    border: 2px solid #2563EB !important;
+    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.25), 0 2px 6px rgba(37, 99, 235, 0.12) !important;
+    position: relative;
+}
+
+.cal-grid-table td.meeting-cell:hover {
+    background: linear-gradient(180deg, #DBEAFE 0%, #BFDBFE 100%) !important;
+    border-color: #1D4ED8 !important;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25) !important;
+}
+
+.cal-grid-table td.meeting-cell.today-cell {
+    background: linear-gradient(180deg, #FEF3C7 0%, #FDE68A 100%) !important;
+    border: 2px solid #D97706 !important;
+}
+
+.cal-grid-table td.meeting-cell-muted {
+    background-color: #F1F5F9 !important;
+    opacity: 0.7;
+}
+
+/* EN-TÊTE DU JOUR DANS LA CASE */
 .cal-day-header {
     text-align: right;
     font-size: 12px;
     font-weight: 600;
-    color: #111827;
+    color: #1E293B;
     line-height: 1;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
 }
 
 .cal-day-header.muted {
-    color: #9CA3AF;
+    color: #94A3B8;
     font-weight: 400;
 }
 
+.cal-day-header.has-meeting {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #1D4ED8;
+    font-weight: 800;
+    font-size: 12.5px;
+}
+
+.cal-event-flag {
+    font-size: 11px;
+    line-height: 1;
+}
+
+/* CARTE / PASTILLE DE LA RENCONTRE DANS LA CASE */
+.cal-meeting-card {
+    background: #1D4ED8;
+    color: #FFFFFF;
+    border-radius: 5px;
+    padding: 3px 5px;
+    margin-top: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    line-height: 1.2;
+    overflow: hidden;
+    text-align: left;
+}
+
+.cal-meeting-card:hover {
+    background: #1E40AF;
+}
+
+.cal-card-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #FFFFFF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cal-card-time {
+    font-size: 9px;
+    font-weight: 500;
+    color: #DBEAFE;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
 .cal-slot-badge {
-    background: #5B4FC4;
+    background: #1D4ED8;
     color: #FFFFFF;
     font-size: 9.5px;
     font-weight: 600;
@@ -2803,6 +2944,75 @@ def get_month_name(m):
             "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"]
     return mois[m - 1]
 
+def get_dates_for_rencontre(r):
+    d_start = parse_date_obj(r.get("date"), default_today=False)
+    if not d_start:
+        return []
+    d_fin = parse_date_obj(r.get("date_fin"), default_today=False)
+    if not d_fin:
+        h = (r.get("horaire") or "").lower()
+        if "samedi" in h and "dimanche" in h:
+            from datetime import timedelta
+            d_fin = d_start + timedelta(days=1)
+        elif "du 2 au 5 juillet" in h:
+            from datetime import timedelta
+            d_fin = d_start + timedelta(days=3)
+    
+    dates_list = []
+    if d_fin and d_fin > d_start:
+        from datetime import timedelta
+        cur = d_start
+        while cur <= d_fin:
+            dates_list.append(cur.strftime("%Y-%m-%d"))
+            cur += timedelta(days=1)
+    else:
+        dates_list.append(d_start.strftime("%Y-%m-%d"))
+    return dates_list
+
+def get_rencontre_icon(titre, type_ev=""):
+    t_lower = (titre or "").lower()
+    if "camp" in t_lower or "tente" in t_lower:
+        return "⛺"
+    if "maroc" in t_lower:
+        return "🐫"
+    if "belgique" in t_lower:
+        return "🇧🇪"
+    if "cambodge" in t_lower:
+        return "🏛️"
+    if "portugal" in t_lower:
+        return "⛵"
+    if "bethléem" in t_lower or "bethleem" in t_lower or "paix" in t_lower:
+        return "🕊️"
+    if "france" in t_lower or "régions" in t_lower:
+        return "🇫🇷"
+    if "clôture" in t_lower or "cloture" in t_lower or "pari" in t_lower:
+        return "🏆"
+    if "fête" in t_lower or "grandir" in t_lower:
+        return "🎉"
+    if "nature" in t_lower or "forêt" in t_lower:
+        return "🌲"
+    return "🏕️"
+
+def get_rencontre_short_title(titre):
+    if not titre:
+        return "Rencontre"
+    clean = titre.split(":")[0].strip()
+    if len(clean) > 24:
+        clean = clean[:22] + "…"
+    return clean
+
+def get_rencontre_short_horaire(h):
+    if not h:
+        return "14:00 - 17:00"
+    h_str = str(h).strip()
+    if "(" in h_str:
+        h_str = h_str.split("(")[0].strip()
+    if "samedi" in h_str.lower() and "dimanche" in h_str.lower():
+        return "Sam. 14h - Dim. 16h"
+    if len(h_str) > 18:
+        return h_str[:17] + "…"
+    return h_str
+
 def build_calendar_html_table(year, month, rencontres_list):
     cal = calendar.Calendar(firstweekday=0)
     weeks = cal.monthdatescalendar(year, month)
@@ -2810,8 +3020,7 @@ def build_calendar_html_table(year, month, rencontres_list):
     
     evts_by_date = {}
     for r in rencontres_list:
-        d_iso = parse_date_to_iso(r.get("date"))
-        if d_iso:
+        for d_iso in get_dates_for_rencontre(r):
             evts_by_date.setdefault(d_iso, []).append(r)
             
     rows = []
@@ -2821,17 +3030,48 @@ def build_calendar_html_table(year, month, rencontres_list):
             is_cur = (day.month == month)
             day_str = day.strftime("%Y-%m-%d")
             cls_num = "cal-day-header" if is_cur else "cal-day-header muted"
-            cls_td = "today-cell" if day_str == today_str else ""
+            
+            has_ev = (day_str in evts_by_date)
+            is_today = (day_str == today_str)
+            
+            td_classes = []
+            if is_today:
+                td_classes.append("today-cell")
+            if has_ev:
+                td_classes.append("meeting-cell" if is_cur else "meeting-cell-muted")
+            cls_td = f' class="{" ".join(td_classes)}"' if td_classes else ""
             
             badges = []
-            if day_str in evts_by_date:
+            if has_ev:
                 for ev in evts_by_date[day_str]:
-                    h = ev.get("horaire", "14:00 - 17:00")
-                    t = ev.get("titre", "Rencontre")
-                    badges.append(f'<span class="cal-slot-badge" title="{t}">{h}</span>')
+                    t_full = ev.get("titre", "Rencontre")
+                    h_full = ev.get("horaire", "14:00 - 17:00")
+                    icon = get_rencontre_icon(t_full, ev.get("type", ""))
+                    s_titre = get_rencontre_short_title(t_full)
+                    s_horaire = get_rencontre_short_horaire(h_full)
+                    escaped_t = t_full.replace('"', '&quot;')
+                    escaped_h = h_full.replace('"', '&quot;')
+                    
+                    badges.append(
+                        f'<div class="cal-meeting-card" title="{escaped_t} • {escaped_h}">'
+                        f'<div class="cal-card-title">{icon} {s_titre}</div>'
+                        f'<div class="cal-card-time">{s_horaire}</div>'
+                        f'</div>'
+                    )
             
             badges_html = "".join(badges)
-            cells.append(f'<td class="{cls_td}"><div class="{cls_num}">{day.day}</div>{badges_html}</td>')
+            
+            if has_ev and is_cur:
+                header_html = (
+                    f'<div class="cal-day-header has-meeting">'
+                    f'<span class="cal-event-flag">⛺</span>'
+                    f'<span class="cal-day-num">{day.day}</span>'
+                    f'</div>'
+                )
+            else:
+                header_html = f'<div class="{cls_num}">{day.day}</div>'
+                
+            cells.append(f'<td{cls_td}>{header_html}{badges_html}</td>')
             
         rows.append(f'<tr>{"".join(cells)}</tr>')
         
@@ -3022,6 +3262,10 @@ if st.session_state["nav_page"] == "🏠 Accueil":
 
         table_html = build_calendar_html_table(st.session_state["cal_year"], st.session_state["cal_month"], current_ronde.get("rencontres", []))
         st.markdown(table_html, unsafe_allow_html=True)
+        cur_pfx_acc = f"{st.session_state['cal_year']}-{st.session_state['cal_month']:02d}"
+        nb_acc = sum(1 for r in current_ronde.get("rencontres", []) if any(d.startswith(cur_pfx_acc) for d in get_dates_for_rencontre(r)))
+        if nb_acc > 0:
+            st.caption(f"🔵 **{nb_acc} rencontre{'s' if nb_acc > 1 else ''}** programmée{'s' if nb_acc > 1 else ''} ce mois-ci (cases surlignées en bleu)")
 
         if st.button("📅 Consulter le planning complet & déroulés ↗", type="primary", use_container_width=True):
             st.session_state["nav_page"] = "📅 Planning des rencontres"
@@ -3117,8 +3361,17 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                         st.session_state["cal_month"] += 1
                     st.rerun()
 
+            cur_prefix = f"{st.session_state['cal_year']}-{st.session_state['cal_month']:02d}"
+            mois_rencontres = [
+                r for r in current_ronde.get("rencontres", [])
+                if any(d.startswith(cur_prefix) for d in get_dates_for_rencontre(r))
+            ]
+            mois_rencontres = sorted(mois_rencontres, key=lambda x: parse_date_to_iso(x.get("date", "")))
+
             cal_full_html = build_calendar_html_table(st.session_state["cal_year"], st.session_state["cal_month"], current_ronde.get("rencontres", []))
             st.markdown(cal_full_html, unsafe_allow_html=True)
+            if mois_rencontres:
+                st.caption(f"🔵 **{len(mois_rencontres)} rencontre{'s' if len(mois_rencontres) > 1 else ''}** surlignée{'s' if len(mois_rencontres) > 1 else ''} en bleu ce mois-ci dans le calendrier.")
 
         with col_cal_side:
             st.markdown("""
@@ -3128,13 +3381,10 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                 </div>
             """, unsafe_allow_html=True)
 
-            cur_prefix = f"{st.session_state['cal_year']}-{st.session_state['cal_month']:02d}"
-            mois_rencontres = [r for r in current_ronde.get("rencontres", []) if parse_date_to_iso(r.get("date", "")).startswith(cur_prefix)]
-            mois_rencontres = sorted(mois_rencontres, key=lambda x: parse_date_to_iso(x.get("date", "")))
-
             if mois_rencontres:
                 for r in mois_rencontres:
-                    with st.expander(f"📍 {format_date_fr(r['date'])} • {r['titre']}", expanded=True):
+                    icon_r = get_rencontre_icon(r.get("titre", ""))
+                    with st.expander(f"{icon_r} {format_date_fr(r['date'])} • {r['titre']}", expanded=True):
                         st.markdown(f"**Horaire :** `{r.get('horaire', '14:00 - 17:00')}`")
                         st.markdown(f"**Lieu :** {r.get('lieu', 'Local Scout')}")
                         st.markdown(f"**Animateur :** {r.get('animateur', 'Non défini')}")
@@ -3151,6 +3401,12 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                                     dialog_supprimer_rencontre(r["id"])
             else:
                 st.info(f"Aucune rencontre en {get_month_name(st.session_state['cal_month'])} {st.session_state['cal_year']}.")
+                next_y, next_m = get_initial_calendar_period(current_ronde)
+                if (next_y, next_m) != (st.session_state["cal_year"], st.session_state["cal_month"]):
+                    if st.button(f"📅 Aller au mois avec rencontre ({get_month_name(next_m)} {next_y}) ↗", use_container_width=True):
+                        st.session_state["cal_year"] = next_y
+                        st.session_state["cal_month"] = next_m
+                        st.rerun()
 
     elif cur_plan_view == "📋 Liste des rencontres & Déroulés":
         rencontres_all = sorted(current_ronde.get("rencontres", []), key=lambda x: parse_date_to_iso(x.get("date", "")))
@@ -4317,10 +4573,18 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
 
         with col_act3:
             excel_path = os.path.join(os.path.dirname(__file__), "Modele_Google_Sheets_Ronde_Farfadets.xlsx")
-            try:
-                excel_bytes = build_excel_export_bytes(db, save_path=excel_path)
-            except Exception:
-                excel_bytes = None
+            excel_bytes = None
+            if os.path.exists(excel_path):
+                try:
+                    with open(excel_path, "rb") as f_ex:
+                        excel_bytes = f_ex.read()
+                except Exception:
+                    excel_bytes = None
+            if not excel_bytes:
+                try:
+                    excel_bytes = build_excel_export_bytes(db, save_path=excel_path)
+                except Exception:
+                    excel_bytes = None
             if excel_bytes:
                 st.download_button(
                     label="📊 Télécharger le classeur Excel (.xlsx)",
