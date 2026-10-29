@@ -1589,7 +1589,7 @@ def dialog_modifier_rencontre(rencontre_id):
                     current_step_mats = cur_s.get("materiels", [])
                     avail_mats = list(set(mat_noms + current_step_mats))
                     m_s_mats = st.multiselect("Matériels", options=avail_mats, default=[x for x in current_step_mats if x in avail_mats])
-                    m_s_com = st.text_input("Commentaire / Consigne", value=cur_s.get("commentaire", ""))
+                    m_s_com = st.text_area("Commentaire / Consigne :", value=cur_s.get("commentaire", ""), height=110, placeholder="Détails du jeu, consignes d'animation, règles, points de vigilance...")
 
                     # Choix de la position dans le déroulé si plusieurs étapes existent
                     m_s_pos = editing_idx
@@ -1761,7 +1761,7 @@ def dialog_modifier_rencontre(rencontre_id):
                         step_h_fin = st.text_input("Heure fin *", value=def_h_fin)
                 with col_s2:
                     step_mats = st.multiselect("Matériels nécessaires", options=mat_noms if mat_noms else ["Foulards", "Goûter", "Boussoles"])
-                    step_com = st.text_input("Commentaire / Consigne d'animation", placeholder="Ex : Diviser la ronde en deux équipes")
+                    step_com = st.text_area("Commentaire / Consigne d'animation :", placeholder="Ex : Diviser la ronde en deux équipes, règles du jeu, consignes de sécurité...", height=110)
 
                 c_as_a1, c_as_a2 = st.columns([1.6, 1])
                 with c_as_a1:
