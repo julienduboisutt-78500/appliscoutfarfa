@@ -790,23 +790,23 @@ def load_data():
     raw.setdefault("google_sheet_auto_sync", True)
     raw.setdefault("google_sheet_webhook_url", "")
 
-    # Restauration initiale depuis Google Sheets UNIQUEMENT au premier démarrage
-    # si le fichier local est vide ou sans rondes (ex: après un redéploiement Git).
-    # Ne s'exécute JAMAIS lors de la navigation entre les menus afin de garantir une réactivité instantanée.
+    # Synchronisation initiale depuis Google Sheets au premier chargement de la session (cold boot).
+    # Récupère automatiquement les dernières données à jour depuis Google Sheets si un Webhook est configuré
+    # (notamment via st.secrets ou dans le JSON), évitant toute perte de données lors d'un redémarrage de Streamlit Cloud.
+    # Ne s'exécute qu'une seule fois par session pour garantir une navigation instantanée par la suite.
     try:
         if "gsheet_boot_attempted" not in st.session_state:
             st.session_state["gsheet_boot_attempted"] = True
-            if not raw.get("rondes") or len(raw.get("rondes", [])) == 0:
-                sync_url = get_google_sheet_webhook_url(raw)
-                if sync_url and raw.get("google_sheet_auto_sync", True):
-                    ok, dfs = fetch_from_google_sheet_webhook(sync_url)
-                    if ok and "Rondes" in dfs and not dfs["Rondes"].empty:
-                        raw = parse_and_apply_imported_tables(dfs, raw)
-                        try:
-                            with open(DATA_FILE, "w", encoding="utf-8") as f:
-                                json.dump(raw, f, ensure_ascii=False, indent=2)
-                        except Exception:
-                            pass
+            sync_url = get_google_sheet_webhook_url(raw)
+            if sync_url and raw.get("google_sheet_auto_sync", True):
+                ok, dfs = fetch_from_google_sheet_webhook(sync_url)
+                if ok and isinstance(dfs, dict) and "Rondes" in dfs and not dfs["Rondes"].empty:
+                    raw = parse_and_apply_imported_tables(dfs, raw)
+                    try:
+                        with open(DATA_FILE, "w", encoding="utf-8") as f:
+                            json.dump(raw, f, ensure_ascii=False, indent=2)
+                    except Exception:
+                        pass
     except Exception:
         pass
 
@@ -4466,12 +4466,21 @@ elif st.session_state["nav_page"] == "⚙️ Paramètres de la Ronde":
 
         current_webhook_url = get_google_sheet_webhook_url(db)
         is_auto_sync = db.get("google_sheet_auto_sync", True)
+        is_in_secrets = False
+        try:
+            is_in_secrets = ("GOOGLE_SHEET_WEBHOOK_URL" in st.secrets) or ("google_sheet_webhook_url" in st.secrets)
+        except Exception:
+            pass
 
         # 1. BANNIÈRE D'ÉTAT DE SYNCHRONISATION
         if current_webhook_url:
-            st.success("🟢 **Synchronisation en direct ACTIVE** : Toute modification enregistrée sur l'application met à jour automatiquement votre Google Sheet en arrière-plan sans bloquer l'interface.")
+            if is_in_secrets:
+                st.success("🟢 **Synchronisation en direct ACTIVE & PERMANENTE** : Votre Webhook est configuré dans les **Secrets Streamlit Cloud**. Aucune donnée ni synchronisation ne sera perdue lors des redémarrages.")
+            else:
+                st.success("🟢 **Synchronisation en direct ACTIVE** : Toute modification enregistrée sur l'application met à jour automatiquement votre Google Sheet en arrière-plan sans bloquer l'interface.")
+                st.info("💡 **Important pour Streamlit Cloud** : Pour que votre URL ne soit jamais effacée lors d'un redémarrage du serveur ou d'un push Git, collez-la dans les **Secrets** de votre application Streamlit (*Settings > Secrets*) :  \n`GOOGLE_SHEET_WEBHOOK_URL = \"" + current_webhook_url + "\"`")
         else:
-            st.info("⚪ **Synchronisation en direct INACTIVE** : Les données sont actuellement stockées sur le disque local du conteneur. Configurez le Webhook ci-dessous pour activer la sauvegarde en direct dans votre Google Drive et ne plus jamais perdre de données lors d'un déploiement Git.")
+            st.warning("⚪ **Synchronisation en direct NON CONFIGURÉE** : Les données sont actuellement stockées sur le disque temporaire du serveur. Configurez le Webhook ci-dessous ou dans vos Secrets Streamlit Cloud pour que vos données soient sauvegardées en direct dans votre Google Sheet et survivent à tous les redémarrages.")
 
         # 2. CONFIGURATION DU WEBHOOK GOOGLE APPS SCRIPT
         st.markdown("##### ⚡ Configuration de la mise à jour en direct")
