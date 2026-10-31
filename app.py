@@ -46,9 +46,13 @@ def verify_password(input_pwd: str, stored_hash: str) -> bool:
 # FONCTIONS UTILITAIRES DE DATE ET FICHIERS
 # =============================================================
 def format_date_fr(d_str):
-    if not d_str or str(d_str).strip() in ("", "None", "nan"):
+    if not d_str or str(d_str).strip() in ("", "None", "nan", "NaT"):
         return ""
     d_clean = str(d_str).strip()
+    if "T" in d_clean:
+        d_clean = d_clean.split("T")[0].strip()
+    elif " " in d_clean and "-" in d_clean:
+        d_clean = d_clean.split(" ")[0].strip()
     if "/" in d_clean:
         return d_clean
     try:
@@ -58,25 +62,37 @@ def format_date_fr(d_str):
         return d_clean
 
 def parse_date_to_iso(d_input):
-    if not d_input or str(d_input).strip() in ("", "None", "nan"):
+    if not d_input or str(d_input).strip() in ("", "None", "nan", "NaT"):
         return ""
     if isinstance(d_input, (date, datetime)):
         return d_input.strftime("%Y-%m-%d")
     d_clean = str(d_input).strip()
+    if "T" in d_clean:
+        d_clean = d_clean.split("T")[0].strip()
+    elif " " in d_clean and "-" in d_clean:
+        d_clean = d_clean.split(" ")[0].strip()
     if "/" in d_clean:
         try:
             parts = d_clean.split("/")
-            return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+            if len(parts) == 3:
+                if len(parts[2]) == 4:
+                    return f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+                elif len(parts[0]) == 4:
+                    return f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
         except Exception:
             return d_clean
     return d_clean
 
 def parse_date_obj(d_input, default_today=True):
-    if not d_input or str(d_input).strip() in ("", "None", "nan"):
+    if not d_input or str(d_input).strip() in ("", "None", "nan", "NaT"):
         return date.today() if default_today else None
     if isinstance(d_input, (date, datetime)):
         return d_input if isinstance(d_input, date) else d_input.date()
     d_clean = str(d_input).strip()
+    if "T" in d_clean:
+        d_clean = d_clean.split("T")[0].strip()
+    elif " " in d_clean and "-" in d_clean:
+        d_clean = d_clean.split(" ")[0].strip()
     if "/" in d_clean:
         try:
             return datetime.strptime(d_clean, "%d/%m/%Y").date()
@@ -658,7 +674,7 @@ def parse_and_apply_imported_tables(dfs_dict, db_target):
                     "id": rc_id,
                     "titre": str(row_rc.get("titre", "")),
                     "type": str(row_rc.get("type", "Rencontre ronde")),
-                    "date": str(row_rc.get("date", "")),
+                    "date": parse_date_to_iso(row_rc.get("date", "")),
                     "horaire": str(row_rc.get("horaire", "14:00 - 17:00")),
                     "lieu": str(row_rc.get("lieu", "")),
                     "lieu_adresse": lieu_adr,

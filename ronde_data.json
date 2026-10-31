@@ -217,37 +217,44 @@
           "titre": "Fête des Grandir & Découverte du Cadre Symbolique",
           "type": "Rencontre ronde",
           "date": "2026-11-08",
-          "horaire": "13:30 - 17:30",
+          "horaire": "09:30-12:30",
           "lieu": "Local Scout - Notre Dame du Val",
           "lieu_adresse": "Notre Dame du Val, Sartrouville",
           "lat": 48.9417,
           "lon": 2.1645,
           "animateur": "Julien DUBOIS, Ief BERBEN, Jeninobert GNANAPIRAGASAM",
           "statut": "À venir",
-          "description": "Première grande rencontre officielle Farfadet de l'année ! Accueil des nouveaux enfants et des 2èmes années, découverte du cadre symbolique de Tom et Prune, découverte des 6 Grandir de la proposition pédagogique Farfadet (avec les autres, son corps, sagesse, ses mains/sa tête, avec Jésus, avec son cœur), cérémonie d'engagement et remise de l'insigne Farfadet. En fin de rencontre : coup de théâtre avec l'ouverture de la malle aux trésors, arrivée du carnet secret de Phileas Fogg, remise des Passeports d'explorateurs pour le Tour du Monde en 80 Jours et grand goûter festif partagé avec les familles.",
+          "description": "Première grande rencontre officielle Farfadet de l'année ! Accueil des nouveaux enfants et des 2èmes années, découverte du cadre symbolique de Tom et Prune, découverte des 6 Grandir de la proposition pédagogique Farfadet (avec les autres, son corps, sagesse, ses mains/sa tête, avec Jésus, avec son cœur), cérémonie d'engagement et remise de l'insigne Farfadet. En fin de rencontre : coup de théâtre avec l'ouverture de la malle aux trésors, arrivée du carnet secret de Phileas Fogg, remise des Passeports d'explorateurs pour le Tour du Monde en 80 Jours.",
           "imaginaire_rencontre": "Tom et Prune arrivent avec la malle aux trésors scellée. Pour l'ouvrir, les Farfadets doivent relever les défis des 6 Grandir et retrouver les couleurs de l'Arc-en-Ciel ! À la fin, la malle révèle la lettre secrète de Phileas Fogg qui invite la ronde à relever le pari d'un Tour du Monde en 80 Jours !",
           "objectifs": "1. Vivre une première expérience scoute chaleureuse et faire connaissance. 2. Découvrir les 6 Grandir des Farfadets (pédagogie nationale SGDF). 3. Lancer l'imaginaire annuel du Tour du Monde en 80 Jours avec Phileas Fogg, Tom et Prune.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
             {
               "date": "08/11/2026",
-              "heure_debut": "13:30",
-              "heure_fin": "14:00",
-              "activite": "Accueil des familles & Jeu brise-glace de la pelote de laine",
+              "heure_debut": "09:30",
+              "heure_fin": "09:45",
+              "activite": "Accueil des familles",
               "animateur": "Julien DUBOIS, Ief BERBEN, Jeninobert GNANAPIRAGASAM",
-              "commentaire": "Accueil chaleureux des enfants et parents, jeux d'attente (accroche-décroche), grand cercle de ronde et jeu de la pelote de laine pour tisser les liens et retenir les prénoms.",
-              "materiels": [
-                "Pelote de laine",
-                "Badges prénoms"
-              ]
+              "commentaire": "Accueil chaleureux des enfants et parents et déplacement vers la zone de la rencontre",
+              "materiels": []
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "14:00",
-              "heure_fin": "14:20",
+              "heure_debut": "09:45",
+              "heure_fin": "10:00",
+              "activite": "Jeu brise-glace de la pelote de laine",
+              "animateur": "Julien DUBOIS, Ief BERBEN, Jeninobert GNANAPIRAGASAM",
+              "commentaire": "",
+              "materiels": []
+            },
+            {
+              "date": "08/11/2026",
+              "heure_debut": "10:00",
+              "heure_fin": "10:15",
               "activite": "Mise en scène : L'histoire de Tom et Prune & La Malle",
-              "animateur": "Ief BERBEN, Farfadets 2ème année",
+              "animateur": "Ief BERBEN, Julien DUBOIS, Farfadets 2ème année",
               "commentaire": "Récit conté avec l'aide des 2èmes années : les lutins gardiens des trésors quittent leur village pour rejoindre la ronde. Présentation du grand panneau vers l'Arc-en-Ciel.",
               "materiels": [
                 "Malle de ronde",
@@ -257,8 +264,8 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "14:20",
-              "heure_fin": "14:45",
+              "heure_debut": "10:15",
+              "heure_fin": "10:30",
               "activite": "Grandir avec les Autres : Loto des copains & Jeu de rangement",
               "animateur": "Julien DUBOIS",
               "commentaire": "Jeu de critères sans parler (ordre de taille, mois de naissance), suivi du Loto des copains pour aller interroger les autres et découvrir leurs particularités.",
@@ -269,8 +276,8 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "14:45",
-              "heure_fin": "15:10",
+              "heure_debut": "10:30",
+              "heure_fin": "10:50",
               "activite": "Grandir avec son corps : La Traversée de la rivière tumultueuse",
               "animateur": "Jeninobert GNANAPIRAGASAM",
               "commentaire": "Parcours moteur d'agilité : traversée de rivière en skate-barque avec corde tendue et saut de rochers en carton. Collage du logo sur le panneau.",
@@ -283,11 +290,11 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "15:10",
-              "heure_fin": "15:35",
-              "activite": "Grandir avec Sagesse : Téléphone arabe & Bâton de parole",
+              "heure_debut": "10:50",
+              "heure_fin": "11:10",
+              "activite": "Grandir avec Sagesse : Bouche à oreille & Bâton de parole",
               "animateur": "Ief BERBEN",
-              "commentaire": "Démonstration par le téléphone arabe croisé qu'il est impossible de comprendre si on n'écoute pas. Réflexion sur les règles de parole et découverte du bâton de parole.",
+              "commentaire": "Démonstration par le bouche à oreille croisé qu'il est impossible de comprendre si on n'écoute pas. Réflexion sur les règles de parole et découverte du bâton de parole.",
               "materiels": [
                 "Bâton de parole brut",
                 "Logo Grandir Sagesse"
@@ -295,8 +302,8 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "15:35",
-              "heure_fin": "16:00",
+              "heure_debut": "11:10",
+              "heure_fin": "11:30",
               "activite": "Grandir avec ses mains et sa tête : Décoration & Charte de la Ronde",
               "animateur": "Julien DUBOIS, Jeninobert GNANAPIRAGASAM",
               "commentaire": "Décoration nature du bâton de parole (rubans, colle, plumes, feutres) et réflexion collective pour rédiger et signer la Charte de vie de la Ronde.",
@@ -309,10 +316,10 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "16:00",
-              "heure_fin": "16:30",
+              "heure_debut": "11:30",
+              "heure_fin": "11:45",
               "activite": "Grandir avec Jésus : Photolangage nature & Le Petit Prince",
-              "animateur": "Ief BERBEN",
+              "animateur": "Jeninobert GNANAPIRAGASAM",
               "commentaire": "En haut de la montagne : contemplation de la nature par le photolangage, lecture du Petit Prince et le renard (apprivoiser / créer des liens), geste des cailloux d'amitié et prière Farfadet.",
               "materiels": [
                 "Photos paysages",
@@ -322,10 +329,10 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "16:30",
-              "heure_fin": "16:50",
+              "heure_debut": "11:45",
+              "heure_fin": "12:00",
               "activite": "Grandir avec son cœur : L'Arc-en-Ciel des émotions & Mémory",
-              "animateur": "Jeninobert GNANAPIRAGASAM",
+              "animateur": "Jeninobert GNANAPIRAGASAM, Ief BERBEN, Julien DUBOIS",
               "commentaire": "Positionnement de son prénom sur les couleurs de l'arc-en-ciel selon son météo intérieur, jeu du mémory des émotions des lutins.",
               "materiels": [
                 "Mémory des lutins",
@@ -335,10 +342,10 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "16:50",
-              "heure_fin": "17:15",
+              "heure_debut": "12:00",
+              "heure_fin": "12:15",
               "activite": "Cérémonial des Grandir, Remise des Insignes & Chant Farfadet",
-              "animateur": "Julien DUBOIS, Responsables",
+              "animateur": "Julien DUBOIS, Ief BERBEN, Responsables",
               "commentaire": "Cérémonie solennelle en présence de tous les parents : engagement des enfants à grandir ensemble, remise de l'insigne officiel Farfadet à chacun et chant de ronde.",
               "materiels": [
                 "Insignes Farfadets SGDF",
@@ -347,15 +354,14 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "17:15",
-              "heure_fin": "17:30",
-              "activite": "Coup de théâtre de Phileas Fogg, Remise des Passeports & Goûter",
+              "heure_debut": "12:15",
+              "heure_fin": "12:30",
+              "activite": "Coup de théâtre de Phileas Fogg, Remise des Passeports",
               "animateur": "Tous",
-              "commentaire": "Ouverture du coffre scellé de la malle : lecture de la lettre de Phileas Fogg, lancement de l'épopée du Tour du Monde en 80 Jours, remise des Passeports de voyage et goûter festif.",
+              "commentaire": "Ouverture du coffre scellé de la malle : lecture de la lettre de Phileas Fogg, lancement de l'épopée du Tour du Monde en 80 Jours, remise des Passeports de voyage",
               "materiels": [
                 "Lettre de Phileas Fogg",
-                "Passeports Farfadets",
-                "Gâteaux et boissons du goûter"
+                "Passeports Farfadets"
               ]
             }
           ],
@@ -394,11 +400,12 @@
             },
             {
               "id": 5,
-              "nom": "Passeports du Tour du Monde en 80 Jours",
-              "qui_amene": "Julien",
+              "nom": "Passeports du Tour du Monde en 80 Jours ou carnet farfadet",
+              "qui_amene": "Parents",
               "photo": "",
               "remarque": "Carnets individuels imprimés",
-              "ok": false
+              "ok": false,
+              "quantite": "Carnets individuels imprimés"
             },
             {
               "id": 6,
@@ -426,14 +433,14 @@
             },
             {
               "id": 9,
-              "nom": "Goûter festif partagé et boissons",
-              "qui_amene": "Parents",
+              "nom": "Malle aux trésors",
+              "qui_amene": "LINA LIM",
               "photo": "",
-              "remarque": "Jus de fruits, gâteaux et serviettes",
-              "ok": false
+              "remarque": "1",
+              "ok": false,
+              "quantite": "1"
             }
-          ],
-          "compte_rendu": "Excellente séance de rentrée ! Les enfants ont été captivés par l'histoire de Tom et Prune et le coup de théâtre de Phileas Fogg. Les badges des Grandir ont suscité beaucoup de fierté. Prévoir un peu plus d'eau pour les jeux en extérieur."
+          ]
         },
         {
           "id": 2,
@@ -450,6 +457,7 @@
           "description": "C'est le grand jour du départ officiel de l'imaginaire ! Avant de franchir les frontières du monde, Phileas Fogg, Tom et Prune font décoller la montgolfière au-dessus de la France pour une première escale gourmande et festive à travers nos terroirs. Les Farfadets découvrent les trésors de nos régions : les phares et galettes de Bretagne, les herbes et senteurs de Provence, le pain d'épices d'Alsace, et les grands jeux traditionnels du patrimoine français. Confection de mini-montgolfières Farfadets, dégustation de crêpes et premier tampon officiel 'Départ de France' sur le Passeport !",
           "imaginaire_rencontre": "Phileas Fogg allume le brûleur de la montgolfière ! Tom et Prune ont réuni toutes leurs affaires dans la malle de voyage. Mais avant de s'élancer vers les océans lointains, un coup de vent emporte la montgolfière au-dessus des magnifiques provinces françaises. Pour tester leur courage d'explorateurs, les Farfadets doivent récolter les spécialités et savoir-faire des quatre coins de l'Hexagone.",
           "objectifs": "1. Lancer activement l'épopée du voyage et tester les équipements d'explorateurs. 2. Découvrir la diversité culturelle, géographique et culinaire des régions françaises. 3. Développer l'esprit d'équipe à travers des jeux traditionnels de terroirs.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -584,8 +592,7 @@
               "remarque": "Premier visa du passeport",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 3,
@@ -602,6 +609,7 @@
           "description": "Une rencontre scoute d'une grande intensité humaine sous le signe de l'Avent et de l'espérance ! Accueil de la Lumière de la Paix de Bethléem allumée dans la grotte de la Nativité. Réalisation de la Grande Bonne Action Scoute (B.A.) : confection de lanternes vitrail étincelantes et de cartes de vœux illustrées, puis visite chaleureuse auprès des aînés de la ville pour leur apporter la lumière, des chants de Noël et de tendres sourires partagés. Goûter festif de Noël avec sablés épicés et chocolat chaud !",
           "imaginaire_rencontre": "En survolant le Proche-Orient, la montgolfière de Phileas Fogg fait escale à Bethléem. Tom et Prune découvrent une petite flamme qui brille jour et nuit : la Lumière de la Paix ! Phileas Fogg explique aux Farfadets que le plus précieux des trésors de la Terre est de faire plaisir aux autres. La ronde est investie d'une noble mission : devenir des semeurs de lumière et accomplir une grande Bonne Action scoute !",
           "objectifs": "1. Découvrir et transmettre le symbole universel de la Lumière de Bethléem. 2. Vivre concrètement la Bonne Action (B.A.) scoute en offrant présence, chaleur et douceurs aux personnes âgées ou isolées. 3. Développer l'empathie, la générosité et l'esprit de service.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -728,8 +736,7 @@
               "remarque": "Pour le passeport Farfadet",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 4,
@@ -746,6 +753,7 @@
           "description": "Escale au Maroc, porte d'entrée de l'Afrique et du désert ! Grand jeu d'orientation dans le parc 'La Caravane de l'Atlas' pour ravitailler les oasis, découverte sensorielle des épices et herbes aromatiques, repas nomade partagé sous la tente berbère, atelier de zelliges en mosaïque et initiation à la calligraphie arabe de son prénom. En fin d'après-midi : cérémonie conviviale du thé à la menthe doux avec dégustation de douceurs orientales et tamponnage du visa 'Maroc' sur le Passeport Farfadet !",
           "imaginaire_rencontre": "La montgolfière de Phileas Fogg atterrit au cœur de la palmeraie de Marrakech ! Tom et Prune découvrent un pays chaleureux où l'accueil du voyageur est sacré. Pour franchir les montagnes escarpées de l'Atlas et poursuivre le tour du globe, la caravane des Farfadets doit coopérer et réunir les ingrédients du thé de l'hospitalité.",
           "objectifs": "Découvrir la culture marocaine et l'hospitalité orientale, développer l'orientation et l'entraide par un grand jeu de caravane, éveil des sens culinaires autour des épices et du thé à la menthe doux, création artistique de mosaïques zelliges.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -898,8 +906,7 @@
               "remarque": "Pour les passeports de voyage",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 5,
@@ -916,6 +923,7 @@
           "description": "Escale portuaire au pays des grands explorateurs maritimes ! Au départ de la tour de Belém à Lisbonne, les Farfadets hissent les voiles. Grand jeu de navigation à la boussole et repérage aux étoiles, initiation aux nœuds marins scouts, atelier artistique de peinture d'Azulejos (carreaux de faïence bleus traditionnels), et dégustation des célèbres Pasteis de Nata dorés et croustillants !",
           "imaginaire_rencontre": "La montgolfière se pose au port de Lisbonne face à l'immensité de l'océan Atlantique. Phileas Fogg confie la barre des caravelles à Tom et Prune. Pour affronter les flots et tracer la route des Indes, les Farfadets doivent prouver leur sens marin et charger la cargaison d'Azulejos précieux.",
           "objectifs": "S'initier aux techniques de navigation scoutes (boussole, nœuds de marin), découvrir l'art traditionnel portugais des Azulejos, développer l'esprit d'équipage et la persévérance.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -1063,8 +1071,7 @@
               "remarque": "Pour les passeports de voyage",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 6,
@@ -1081,6 +1088,7 @@
           "description": "Escale joyeuse et malicieuse en Belgique, berceau de la bande dessinée ! Grand Cluedo scout grandeur nature dans la forêt avec loupes et messages codés pour retrouver la boussole d'or dérobée à Phileas Fogg, création collective d'une planche de BD géante 'Les Aventures de Tom et Prune', et grand atelier culinaire de gaufres liégeoises caramélisées au sucre perlé avec chocolat belge fondu !",
           "imaginaire_rencontre": "En survolant la Belgique, un corbeau farceur a chipé la boussole d'or de Phileas Fogg ! Tom et Prune enfilent leurs casquettes de détectives reporters à la manière de Tintin. Les Farfadets vont devoir déchiffrer les rébus et suivre les empreintes cachées pour reconstituer l'album disparu et retrouver la boussole.",
           "objectifs": "Développer le sens de l'observation et la déduction logique, stimuler l'imagination et l'expression graphique (BD), vivre un atelier cuisine convivial et gourmand.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -1209,8 +1217,7 @@
               "remarque": "Pour les passeports de voyage",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 7,
@@ -1227,6 +1234,7 @@
           "description": "Le grand temps fort scout de l'année au niveau du territoire ! Premier week-end complet sous la tente pour beaucoup de Farfadets. Rassemblement de plus de 100 enfants et animateurs. Olympiades géantes des cinq continents, apprentissage de la vie de camp, grande veillée au feu de bois avec contes et légendes du monde, célébration du dimanche matin en pleine forêt et grand banquet partagé avec toutes les familles.",
           "imaginaire_rencontre": "Phileas Fogg convoque toutes les rondes du territoire au Sommet International des Explorateurs ! Tom et Prune retrouvent les lutins des autres rondes. Ensemble, ils vont ériger le grand campement de la fraternité et prouver que la paix mondiale se construit en vivant et en jouant tous ensemble sous les étoiles.",
           "objectifs": "1. Découvrir et apprivoiser la vie de camp sous la tente. 2. Partager des activités et grands jeux avec les autres rondes du territoire. 3. Vivre la veillée scoute au feu de camp et la communion dans la nature.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -1414,8 +1422,7 @@
               "remarque": "Pour les passeports de voyage",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 8,
@@ -1432,6 +1439,7 @@
           "description": "Escale magique en Asie du Sud-Est au milieu des temples mystérieux d'Angkor envahis par la forêt ! Grand jeu coopératif 'Les Bâtisseurs d'Angkor' pour acheminer les blocs sacrés à travers la jungle, atelier créatif de fabrication de marionnettes traditionnelles en carton ajouré (théâtre d'ombres Sbek Thom), dégustation exotique de riz doux au lait de coco et bananes fraîches, et grand spectacle d'ombres derrière la toile rétro-éclairée !",
           "imaginaire_rencontre": "La montgolfière de Phileas Fogg survole les arbres centenaires et les tours de pierre du Cambodge. Tom et Prune rencontrent Hanuman, le roi des singes farceur, gardien des secrets d'Angkor. Pour continuer le voyage, les Farfadets doivent coopérer pour réveiller les ombres magiques du temple.",
           "objectifs": "Découvrir la richesse de la culture khmère et le respect de la nature, développer l'agilité manuelle et l'imaginaire avec les marionnettes d'ombres, éveil du goût aux saveurs douces d'Asie.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -1576,8 +1584,7 @@
               "remarque": "Pour les passeports de voyage",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 9,
@@ -1594,6 +1601,7 @@
           "description": "L'apothéose et la clôture officielle du Tour du Monde en 80 Jours ! Phileas Fogg, Tom et Prune bouclent leur périple extraordinaire autour de la planète. Grand jeu de piste récapitulatif 'Le Défi Chrono des 80 Jours' réunissant les énigmes de toutes les escales de l'année (France, Maroc, Bethléem, Portugal, Belgique, Cambodge), grand banquet de gala du Reform Club célébrant la victoire du pari, vérification de tous les passeports tamponnés et remise solennelle des Diplômes d'Explorateurs du Monde à chaque Farfadet. Présentation festive du Grand Camp d'Été inter-rondes de juillet !",
           "imaginaire_rencontre": "Les cloches de Big Ben sonnent à toute volée : le pari de Phileas Fogg est gagné en 80 jours pile ! Grâce au courage, à la curiosité et à la bienveillance des Farfadets de Sartrouville, la malle aux trésors est comble de souvenirs inoubliables. Tom et Prune ouvrent le grand bal des explorateurs pour fêter la victoire de l'amitié autour du globe !",
           "objectifs": "1. Clôturer l'épopée annuelle du Tour du Monde et valoriser les progrès de chaque enfant. 2. Vérifier et compléter les passeports de voyage avec le grand visa doré d'accomplissement. 3. Fêter ensemble la fin de l'année scoute avec les familles et introduire la perspective du grand camp d'été.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -1723,8 +1731,7 @@
               "remarque": "Pour le grand banquet du Reform Club",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         },
         {
           "id": 10,
@@ -1741,6 +1748,7 @@
           "description": "La grande aventure d'été sous la tente ! Pendant 4 jours en pleine nature, les Farfadets de Sartrouville rejoignent d'autres rondes Farfadets venues d'autres villes et territoires pour un grand camp partagé sous un tout nouvel imaginaire. Au programme : découverte de la vie en camp scout (montage des tentes, cuisine trappeur au feu de bois, vaisselle au grand air), grands jeux d'amitié inter-groupes, veillées communes aux flambeaux avec chants et guitares, olympiades nature, et cérémonie émouvante de passage des Farfadets 2ème année vers la Peuplade des Louveteaux-Jeannettes !",
           "imaginaire_rencontre": "Un tout nouvel imaginaire de camp (en cours de création avec les enfants et les autres rondes) ouvrira les portes d'un univers inédit où plusieurs groupes de différentes villes s'uniront pour vivre une formidable aventure collective en forêt !",
           "objectifs": "1. Vivre l'expérience fondatrice du camp scout de 4 jours sous la tente en autonomie et en fraternité. 2. Rencontrer, échanger et faire alliance avec d'autres rondes Farfadets d'autres villes. 3. Célébrer la fin de la saison et accompagner le passage des 2èmes années vers les Louveteaux-Jeannettes.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -1987,8 +1995,7 @@
               "remarque": "Pour animer les veillées au feu de bois",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         }
       ],
       "imaginaire": "### 🧭 L'Aventure de l'Année : Le Tour du Monde en 80 Jours !\n\nUn après-midi au local scout de Sartrouville, **Tom et Prune**, nos deux lutins Farfadets farceurs et gardiens de la malle aux trésors, font une découverte extraordinaire. Au fond de la malle, sous les foulards et les boussoles, repose un vieux carnet de cuir gravé aux initiales d'un illustre voyageur : **Phileas Fogg** !\n\nAccompagné de son fidèle ami Passepartout, le célèbre explorateur gentleman a fait un pari audacieux : **accomplir le tour du globe en 80 jours** et rapporter les plus précieux trésors de l'humanité. Mais pour réussir cette immense aventure, il a besoin de véritables explorateurs au grand cœur : **les Farfadets de la 3ème Sartrouville** !\n\nTout au long de l'année, guidés par Tom, Prune et Phileas Fogg, les enfants vont embarquer dans une montgolfière imaginaire, franchir mers et continents, et faire escale dans des contrées fascinantes :\n* 🇫🇷 **29 novembre 2026 - Le Grand Départ de France** : L'envol de la montgolfière et la découverte de nos régions françaises (terroirs, gastronomie, contes et jeux traditionnels).\n* 🕊️ **13 décembre 2026 - Escale de la Paix & Lumière de Bethléem** : La grande Bonne Action scoute et le partage de la chaleur et des sourires auprès des aînés.\n* 🇲🇦 **17 janvier 2027 - Escale au Maroc** : Les trésors de l'Atlas, la caravane du désert, l'art des zelliges et la cérémonie du thé à la menthe doux.\n* 🇵🇹 **28 février 2027 - Escale au Portugal** : Le port des grands navigateurs, les caravelles atlantiques, l'orientation boussole, les azulejos et les pasteis de nata.\n* 🇧🇪 **21 mars 2027 - Escale en Belgique** : Le royaume des détectives et de la bande dessinée (style Tintin), grand jeu d'enquête en forêt, gaufres liégeoises et chocolat.\n* ⛺ **24 & 25 avril 2027 - Camp Territorial** : Le grand sommet international sous la tente avec toutes les rondes Farfadets du territoire.\n* 🇰🇭 **23 mai 2027 - Escale au Cambodge** : Au cœur de la cité sacrée d'Angkor, les bâtisseurs de temples et le grand théâtre d'ombres Sbek Thom.\n* 🏆 **13 juin 2027 - Clôture du Tour du Monde en 80 Jours** : L'arrivée triomphale à Londres, la célébration du pari gagné, le grand banquet du Reform Club et la remise des diplômes d'explorateurs !\n* ⛺ **2 au 5 juillet 2027 - Le Grand Camp d'Été** : Une aventure inédite en pleine nature sous un tout nouvel imaginaire de camp, à la rencontre d'autres groupes Farfadets venus d'autres villes !\n\n#### 🎒 Les 5 Piliers de chaque Escale :\n1. 🛂 **Le Passeport Farfadet** : Chaque enfant possède son passeport d'explorateur tamponné d'un visa officiel à chaque pays traversé.\n2. 🍲 **La Découverte Culinaire** : Des saveurs, épices douces et spécialités traditionnelles cuisinées ou dégustées ensemble.\n3. 🎭 **Les Déguisements & Traditions** : Tenues typiques, coiffes et accessoires pour plonger dans l'ambiance locale.\n4. 🏃 **Les Grands Jeux & Défis Coopératifs** : Jeux traditionnels du pays stimulant les 6 Grandir (agilité, esprit d'équipe, écoute, créativité, cœur et spiritualité).\n5. 🤝 **L'Esprit Scout & La Bonne Action** : Bienveillance, respect de la Création et ouverture généreuse sur le monde.\n",
@@ -2095,6 +2102,7 @@
           "description": "Lancement de l'année scoute pour la Ronde 2.",
           "imaginaire_rencontre": "Rencontre avec les farfadets.",
           "objectifs": "Faire connaissance et poser les règles de vie.",
+          "compte_rendu": "",
           "photo": "",
           "colonnes_deroule": [],
           "deroule": [
@@ -2118,8 +2126,7 @@
               "photo": "",
               "ok": false
             }
-          ],
-          "compte_rendu": ""
+          ]
         }
       ],
       "imaginaire": "Bienvenue au village des Farfadets !",
@@ -2138,11 +2145,11 @@
       "mot_de_passe": "9580218ab9e8ca55b7ba4ad97c5222bde0f38ded42afb7c69941158080550473",
       "role": "admin",
       "membre_id": 1,
+      "membre_ronde_id": 1,
       "rondes_autorisees": [
         1,
         2
-      ],
-      "membre_ronde_id": 1
+      ]
     },
     {
       "id": 2,
@@ -2152,10 +2159,10 @@
       "mot_de_passe": "scout123",
       "role": "admin",
       "membre_id": 2,
+      "membre_ronde_id": 1,
       "rondes_autorisees": [
         1
-      ],
-      "membre_ronde_id": 1
+      ]
     },
     {
       "id": 3,
@@ -2165,10 +2172,10 @@
       "mot_de_passe": "scout123",
       "role": "parent",
       "membre_id": 3,
+      "membre_ronde_id": 1,
       "rondes_autorisees": [
         1
-      ],
-      "membre_ronde_id": 1
+      ]
     },
     {
       "id": 4,
@@ -2178,10 +2185,10 @@
       "mot_de_passe": "9580218ab9e8ca55b7ba4ad97c5222bde0f38ded42afb7c69941158080550473",
       "role": "parent",
       "membre_id": 6,
+      "membre_ronde_id": 1,
       "rondes_autorisees": [
         1
-      ],
-      "membre_ronde_id": 1
+      ]
     },
     {
       "id": 5,
@@ -2191,11 +2198,13 @@
       "mot_de_passe": "9580218ab9e8ca55b7ba4ad97c5222bde0f38ded42afb7c69941158080550473",
       "role": "parent",
       "membre_id": 4,
+      "membre_ronde_id": 1,
       "rondes_autorisees": [
         1
-      ],
-      "membre_ronde_id": 1
+      ]
     }
   ],
-  "google_sheet_url": "https://docs.google.com/spreadsheets/d/1yfVu4WgO21PWUzla9-SNTwnC7ZrZfp-K/edit?usp=drive_link&ouid=100161899100847525946&rtpof=true&sd=true"
+  "google_sheet_url": "https://docs.google.com/spreadsheets/d/1yfVu4WgO21PWUzla9-SNTwnC7ZrZfp-K/edit?usp=drive_link&ouid=100161899100847525946&rtpof=true&sd=true",
+  "google_sheet_webhook_url": "https://script.google.com/macros/s/AKfycbxAp4LhHb4IeD4yEq6sLTXpCbX9FPLTo_JthPAbAAqrauttQixHzvYBEqBUXkRUwoLH/exec",
+  "google_sheet_auto_sync": true
 }
