@@ -1215,25 +1215,41 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 
 .user-badge-btn {
-    background-color: #1E3A8A;
+    background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%) !important;
     color: #FFFFFF !important;
     font-size: 13px;
-    font-weight: 600;
-    padding: 7px 16px;
+    font-weight: 700;
+    padding: 6px 14px;
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    box-shadow: 0 2px 6px rgba(29, 78, 216, 0.25);
+    border: 1px solid #1D4ED8;
+}
+
+.user-badge-btn, .user-badge-btn *, .user-badge-btn span, .user-badge-name {
+    color: #FFFFFF !important;
+}
+
+.user-badge-name {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
 }
 
 .role-tag-pill {
-    background: #3B82F6;
-    color: white;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: #FFFFFF !important;
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    padding: 2px 7px;
+    border-radius: 6px;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
 /* HERO BANNER EN-TÊTE */
@@ -1847,7 +1863,8 @@ with top_col4:
     with u_c1:
         st.markdown(f"""
             <div class="user-badge-btn" title="Connecté en tant que {logged_user.get('prenom')} {logged_user.get('nom')}">
-                <span>👤</span> {logged_user.get('nom', '').upper()} {logged_user.get('prenom', '')} 
+                <span style="color:#FFFFFF !important; font-size:14px; line-height:1;">👤</span> 
+                <span class="user-badge-name" style="color:#FFFFFF !important; font-weight:700;">{logged_user.get('nom', '').upper()} {logged_user.get('prenom', '')}</span> 
                 <span class="role-tag-pill">{user_role_label}</span>
             </div>
         """, unsafe_allow_html=True)
