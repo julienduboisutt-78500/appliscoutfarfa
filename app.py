@@ -1659,6 +1659,68 @@ def is_admin():
 def is_responsable_or_admin():
     return get_user_role() in ["admin", "responsable"]
 
+def is_user_animator_of_rencontre(user, r, ronde=None):
+    """
+    Vérifie si un utilisateur (notamment un parent) est identifié comme animateur d'une rencontre,
+    soit au niveau des animateurs référents de la rencontre, soit dans les étapes du déroulé.
+    """
+    if not user or not r:
+        return False
+    
+    # 1. Nom et prénom du compte utilisateur
+    u_nom = (user.get("nom") or "").strip().lower()
+    u_prenom = (user.get("prenom") or "").strip().lower()
+    
+    # 2. Informations du membre rattaché à cet utilisateur dans la ronde
+    m_nom = ""
+    m_prenom = ""
+    m_id = user.get("membre_id")
+    target_ronde = ronde or (current_ronde if "current_ronde" in globals() else None)
+    if m_id and target_ronde:
+        m = next((mb for mb in target_ronde.get("membres", []) if mb.get("id") == m_id), None)
+        if m:
+            m_nom = (m.get("nom") or "").strip().lower()
+            m_prenom = (m.get("prenom") or "").strip().lower()
+            
+    # 3. Récupérer toutes les mentions d'animateurs de la rencontre
+    anim_strings = [str(r.get("animateur", ""))]
+    for step in r.get("deroule", []):
+        if step.get("animateur"):
+            anim_strings.append(str(step.get("animateur")))
+            
+    full_anim_text = " ".join(anim_strings).lower()
+    
+    # Vérification par nom de famille (au moins 3 caractères pour éviter les faux positifs)
+    if u_nom and len(u_nom) >= 3 and u_nom in full_anim_text:
+        return True
+    if m_nom and len(m_nom) >= 3 and m_nom in full_anim_text:
+        return True
+        
+    # Vérification par prénom complet (mot entier)
+    if u_prenom and len(u_prenom) >= 3 and re.search(r'\b' + re.escape(u_prenom) + r'\b', full_anim_text):
+        return True
+    if m_prenom and len(m_prenom) >= 3 and re.search(r'\b' + re.escape(m_prenom) + r'\b', full_anim_text):
+        return True
+        
+    return False
+
+def can_configure_rencontre(r, user=None):
+    """
+    Détermine si l'utilisateur a le droit de configurer la rencontre :
+    - Les administrateurs et responsables peuvent configurer toutes les rencontres de la ronde.
+    - Les parents identifiés comme animateurs de la rencontre concernée ont également le droit de la configurer.
+    """
+    if not r:
+        return False
+    u = user or st.session_state.get("logged_user")
+    if not u:
+        return False
+    role = (u.get("role") or "").lower()
+    if role in ["admin", "responsable"]:
+        return True
+    # Si c'est un parent (ou autre rôle), vérifier s'il est animateur de cette rencontre
+    return is_user_animator_of_rencontre(u, r)
+
 # ----------------- VUE DE CONNEXION OBLIGATOIRE -----------------
 if "logged_user" not in st.session_state or st.session_state["logged_user"] is None:
     st.markdown("""
@@ -1962,6 +2024,17 @@ def dialog_modifier_rencontre(rencontre_id):
             st.session_state["active_editing_rencontre_id"] = None
             st.rerun()
         return
+
+    if not can_configure_rencontre(r):
+        st.error("Vous n'êtes pas autorisé à configurer cette rencontre car vous n'en êtes pas l'animateur.")
+        if st.button("Fermer"):
+            st.session_state["active_editing_rencontre_id"] = None
+            st.rerun()
+        return
+
+    is_anim_parent = (get_user_role() == "parent") and is_user_animator_of_rencontre(logged_user, r)
+    if is_anim_parent:
+        st.info(f"👋 **{logged_user.get('prenom')}**, vous êtes identifié comme animateur de cette rencontre. Vous pouvez en configurer librement le déroulé, la liste du matériel, les commentaires et les objectifs.")
 
     st.markdown(f"### 📌 Événement : **{r.get('titre')}**")
     
@@ -3422,16 +3495,24 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                         st.markdown(f"**Lieu :** {r.get('lieu', 'Local Scout')}")
                         st.markdown(f"**Animateur :** {r.get('animateur', 'Non défini')}")
                         
-                        if is_responsable_or_admin():
-                            btn_m1, btn_m2 = st.columns(2)
-                            with btn_m1:
+                        can_edit = can_configure_rencontre(r)
+                        can_del = is_responsable_or_admin()
+                        if can_edit or can_del:
+                            if can_edit and can_del:
+                                btn_m1, btn_m2 = st.columns(2)
+                                with btn_m1:
+                                    if st.button("⚙️ Configurer", key=f"btn_edit_cal_{r['id']}", use_container_width=True):
+                                        st.session_state["active_editing_rencontre_id"] = r["id"]
+                                        st.session_state["planning_view"] = "📅 Vue Calendrier mensuel"
+                                        st.rerun()
+                                with btn_m2:
+                                    if st.button("🗑️ Supprimer", key=f"btn_del_cal_{r['id']}", use_container_width=True):
+                                        dialog_supprimer_rencontre(r["id"])
+                            elif can_edit:
                                 if st.button("⚙️ Configurer", key=f"btn_edit_cal_{r['id']}", use_container_width=True):
                                     st.session_state["active_editing_rencontre_id"] = r["id"]
                                     st.session_state["planning_view"] = "📅 Vue Calendrier mensuel"
                                     st.rerun()
-                            with btn_m2:
-                                if st.button("🗑️ Supprimer", key=f"btn_del_cal_{r['id']}", use_container_width=True):
-                                    dialog_supprimer_rencontre(r["id"])
             else:
                 st.info(f"Aucune rencontre en {get_month_name(st.session_state['cal_month'])} {st.session_state['cal_year']}.")
                 next_y, next_m = get_initial_calendar_period(current_ronde)
@@ -3459,16 +3540,26 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                         </div>
                     """, unsafe_allow_html=True)
 
-                    if is_responsable_or_admin():
-                        c_act1, c_act2, c_act3 = st.columns([1.5, 1, 3])
-                        with c_act1:
-                            if st.button("⚙️ Configurer la rencontre", key=f"btn_edit_list_{r['id']}", use_container_width=True):
-                                st.session_state["active_editing_rencontre_id"] = r["id"]
-                                st.session_state["planning_view"] = "📋 Liste des rencontres & Déroulés"
-                                st.rerun()
-                        with c_act2:
-                            if st.button("🗑️ Supprimer", key=f"btn_del_list_{r['id']}", use_container_width=True):
-                                dialog_supprimer_rencontre(r["id"])
+                    can_edit = can_configure_rencontre(r)
+                    can_del = is_responsable_or_admin()
+                    if can_edit or can_del:
+                        if can_edit and can_del:
+                            c_act1, c_act2, c_act3 = st.columns([1.5, 1, 3])
+                            with c_act1:
+                                if st.button("⚙️ Configurer la rencontre", key=f"btn_edit_list_{r['id']}", use_container_width=True):
+                                    st.session_state["active_editing_rencontre_id"] = r["id"]
+                                    st.session_state["planning_view"] = "📋 Liste des rencontres & Déroulés"
+                                    st.rerun()
+                            with c_act2:
+                                if st.button("🗑️ Supprimer", key=f"btn_del_list_{r['id']}", use_container_width=True):
+                                    dialog_supprimer_rencontre(r["id"])
+                        elif can_edit:
+                            c_act1, c_act_space = st.columns([1.5, 4])
+                            with c_act1:
+                                if st.button("⚙️ Configurer la rencontre", key=f"btn_edit_list_{r['id']}", use_container_width=True):
+                                    st.session_state["active_editing_rencontre_id"] = r["id"]
+                                    st.session_state["planning_view"] = "📋 Liste des rencontres & Déroulés"
+                                    st.rerun()
                     
                     with st.expander(f"Voir le déroulé et matériels de la séance ({len(r.get('deroule', []))} étapes)"):
                         if r.get("photo"):
@@ -3520,7 +3611,7 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                         else:
                             st.caption("Aucun compte-rendu rédigé pour le moment.")
 
-                        if is_responsable_or_admin():
+                        if can_configure_rencontre(r):
                             with st.expander("✏️ Rédiger ou modifier les notes / compte-rendu de cette séance"):
                                 with st.form(f"form_quick_cr_{r['id']}"):
                                     quick_cr = st.text_area("Notes & Bilan de la séance :", value=r.get("compte_rendu", ""), height=100)
