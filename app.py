@@ -22,6 +22,8 @@ st.set_page_config(
 )
 
 DATA_FILE = "ronde_data.json"
+DEFAULT_GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAp4LhHb4IeD4yEq6sLTXpCbX9FPLTo_JthPAbAAqrauttQixHzvYBEqBUXkRUwoLH/exec"
+DEFAULT_GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1yfVu4WgO21PWUzla9-SNTwnC7ZrZfp-K/edit?usp=drive_link&ouid=100161899100847525946&rtpof=true&sd=true"
 
 # =============================================================
 # SÉCURITÉ : HACHAGE & VÉRIFICATION DES MOTS DE PASSE
@@ -406,7 +408,8 @@ def extract_tables_dict(database_obj):
         r_auth = u.get("rondes_autorisees", [])
         rows_u.append({
             "id": u.get("id"), "prenom": u.get("prenom", ""), "nom": u.get("nom", ""),
-            "email": u.get("email", ""), "role": u.get("role", "parent"), "membre_id": u.get("membre_id", ""),
+            "email": u.get("email", ""), "mot_de_passe": u.get("mot_de_passe", ""),
+            "role": u.get("role", "parent"), "membre_id": u.get("membre_id", ""),
             "membre_ronde_id": u.get("membre_ronde_id", 1),
             "rondes_autorisees": ", ".join(map(str, r_auth)) if isinstance(r_auth, list) else str(r_auth)
         })
@@ -462,7 +465,7 @@ def build_excel_export_bytes(database_obj, save_path=None):
 def get_google_sheet_webhook_url(data_obj=None):
     """
     Récupère l'URL du webhook Google Apps Script, en vérifiant d'abord dans st.secrets,
-    puis dans l'objet de base de données.
+    puis dans l'objet de base de données, la session Streamlit ou le fallback par défaut garanti.
     """
     try:
         if "GOOGLE_SHEET_WEBHOOK_URL" in st.secrets:
@@ -476,13 +479,24 @@ def get_google_sheet_webhook_url(data_obj=None):
     except Exception:
         pass
     if data_obj and isinstance(data_obj, dict):
-        return str(data_obj.get("google_sheet_webhook_url", "")).strip()
+        val = str(data_obj.get("google_sheet_webhook_url", "")).strip()
+        if val:
+            return val
     try:
         if "db" in globals() and isinstance(globals()["db"], dict):
-            return str(globals()["db"].get("google_sheet_webhook_url", "")).strip()
+            val = str(globals()["db"].get("google_sheet_webhook_url", "")).strip()
+            if val:
+                return val
     except Exception:
         pass
-    return ""
+    try:
+        if "db" in st.session_state and isinstance(st.session_state["db"], dict):
+            val = str(st.session_state["db"].get("google_sheet_webhook_url", "")).strip()
+            if val:
+                return val
+    except Exception:
+        pass
+    return DEFAULT_GOOGLE_SHEET_WEBHOOK_URL
 
 def push_to_google_sheet(database_obj, webhook_url=None):
     """
@@ -763,7 +777,13 @@ def parse_and_apply_imported_tables(dfs_dict, db_target):
             if not u_email or u_email == "nan":
                 continue
             existing_u = next((u for u in db_target.get("utilisateurs", []) if u.get("email", "").strip().lower() == u_email.lower()), None)
-            pwd_hash = existing_u.get("mot_de_passe") if existing_u else hash_password("scout123")
+            pwd_sheet = str(row_u.get("mot_de_passe", "")).strip() if "mot_de_passe" in df_u_sheet.columns and pd.notna(row_u.get("mot_de_passe")) else ""
+            if pwd_sheet and pwd_sheet != "nan":
+                pwd_hash = pwd_sheet
+            elif existing_u and existing_u.get("mot_de_passe"):
+                pwd_hash = existing_u.get("mot_de_passe")
+            else:
+                pwd_hash = hash_password("scout123")
             u_id = safe_int(row_u.get("id")) if pd.notna(row_u.get("id")) else (existing_u.get("id") if existing_u else len(imported_users) + 1)
             r_auth_str = str(row_u.get("rondes_autorisees", ""))
             try:
@@ -788,43 +808,77 @@ def parse_and_apply_imported_tables(dfs_dict, db_target):
         if imported_users:
             db_target["utilisateurs"] = imported_users
 
+    # Configuration
+    df_cfg = dfs_dict.get("Configuration", pd.DataFrame())
+    if not df_cfg.empty and "cle" in df_cfg.columns and "valeur" in df_cfg.columns:
+        for _, row_c in df_cfg.iterrows():
+            cle = str(row_c.get("cle", "")).strip()
+            val = str(row_c.get("valeur", "")).strip()
+            if cle == "active_ronde_id" and val.isdigit():
+                db_target["active_ronde_id"] = safe_int(val, 1)
+            elif cle == "google_sheet_url" and val and val != "nan":
+                db_target["google_sheet_url"] = val
+            elif cle == "google_sheet_webhook_url" and val and val != "nan":
+                db_target["google_sheet_webhook_url"] = val
+
     return db_target
 
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        raw = {"active_ronde_id": 1, "rondes": [], "utilisateurs": []}
-    else:
+def load_data(force_reload=False):
+    """
+    Charge les données en priorité absolue depuis GOOGLE SHEETS (source de vérité unique).
+    Conserve les données en mémoire de session (st.session_state) pour une navigation fluide et instantanée.
+    Utilise le miroir local uniquement si Google Sheets est inaccessible.
+    """
+    # 1. Utiliser les données déjà en session si chargées (sauf si rechargement forcé)
+    if not force_reload and "db" in st.session_state and isinstance(st.session_state["db"], dict) and st.session_state["db"].get("rondes"):
+        return st.session_state["db"]
+
+    webhook_url = get_google_sheet_webhook_url()
+    loaded_from_sheet = False
+    raw = None
+
+    # 2. Source de vérité : GOOGLE SHEETS via le Webhook Apps Script
+    if webhook_url:
         try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                raw = json.load(f)
+            ok, dfs = fetch_from_google_sheet_webhook(webhook_url)
+            if ok and isinstance(dfs, dict) and "Rondes" in dfs and not dfs["Rondes"].empty:
+                base_raw = {
+                    "active_ronde_id": 1,
+                    "rondes": [],
+                    "utilisateurs": [],
+                    "google_sheet_webhook_url": webhook_url,
+                    "google_sheet_url": DEFAULT_GOOGLE_SHEET_URL,
+                    "google_sheet_auto_sync": True
+                }
+                raw = parse_and_apply_imported_tables(dfs, base_raw)
+                loaded_from_sheet = True
         except Exception:
-            raw = {"active_ronde_id": 1, "rondes": [], "utilisateurs": []}
+            pass
+
+    # 3. Fallback miroir local uniquement si Google Sheets n'a pas pu être interrogé
+    if not loaded_from_sheet or not raw:
+        if os.path.exists(DATA_FILE):
+            try:
+                with open(DATA_FILE, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+            except Exception:
+                raw = None
+        if not raw:
+            raw = {
+                "active_ronde_id": 1,
+                "rondes": [],
+                "utilisateurs": [],
+                "google_sheet_webhook_url": webhook_url,
+                "google_sheet_url": DEFAULT_GOOGLE_SHEET_URL,
+                "google_sheet_auto_sync": True
+            }
 
     raw.setdefault("active_ronde_id", 1)
     raw.setdefault("rondes", [])
     raw.setdefault("utilisateurs", [])
     raw.setdefault("google_sheet_auto_sync", True)
-    raw.setdefault("google_sheet_webhook_url", "")
-
-    # Synchronisation initiale depuis Google Sheets au premier chargement de la session (cold boot).
-    # Récupère automatiquement les dernières données à jour depuis Google Sheets si un Webhook est configuré
-    # (notamment via st.secrets ou dans le JSON), évitant toute perte de données lors d'un redémarrage de Streamlit Cloud.
-    # Ne s'exécute qu'une seule fois par session pour garantir une navigation instantanée par la suite.
-    try:
-        if "gsheet_boot_attempted" not in st.session_state:
-            st.session_state["gsheet_boot_attempted"] = True
-            sync_url = get_google_sheet_webhook_url(raw)
-            if sync_url and raw.get("google_sheet_auto_sync", True):
-                ok, dfs = fetch_from_google_sheet_webhook(sync_url)
-                if ok and isinstance(dfs, dict) and "Rondes" in dfs and not dfs["Rondes"].empty:
-                    raw = parse_and_apply_imported_tables(dfs, raw)
-                    try:
-                        with open(DATA_FILE, "w", encoding="utf-8") as f:
-                            json.dump(raw, f, ensure_ascii=False, indent=2)
-                    except Exception:
-                        pass
-    except Exception:
-        pass
+    raw.setdefault("google_sheet_webhook_url", webhook_url)
+    raw.setdefault("google_sheet_url", DEFAULT_GOOGLE_SHEET_URL)
 
     for ro in raw.get("rondes", []):
         ro.setdefault("imaginaire_photos", [])
@@ -834,12 +888,31 @@ def load_data():
             mb.setdefault("parents_ids", [])
             mb.setdefault("enfants_ids", [])
         ro["rencontres"] = [normalize_rencontre_data(r) for r in ro.get("rencontres", [])]
+
+    # Mise à jour du miroir local
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(raw, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+    st.session_state["db"] = raw
     return raw
 
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    # Synchronisation automatique en direct vers Google Sheets & miroir Excel en tâche de fond (instantané et non-bloquant)
+    """
+    Enregistre les données :
+    1. Met à jour l'état en session (instantané).
+    2. Sauvegarde le miroir local.
+    3. Pousse la totalité des tables (y compris utilisateurs et mots de passe) vers Google Sheets en direct.
+    """
+    st.session_state["db"] = data
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+    # Synchronisation automatique en direct vers Google Sheets & miroir Excel en tâche de fond
     push_to_google_sheet_async(data)
 
 db = load_data()
@@ -1870,11 +1943,18 @@ def dialog_burger_menu():
         </div>
     """, unsafe_allow_html=True)
 
-    if st.button("🚪 Se déconnecter", key="btn_logout_drawer", use_container_width=True):
-        st.session_state["logged_user"] = None
-        st.session_state["active_editing_rencontre_id"] = None
-        st.session_state["flash_success"] = "Vous avez été déconnecté."
-        st.rerun()
+    c_sync_d1, c_sync_d2 = st.columns([1, 1])
+    with c_sync_d1:
+        if st.button("🔄 Synchroniser", key="btn_sync_drawer", use_container_width=True, help="Recharge les données et comptes depuis Google Sheets"):
+            load_data(force_reload=True)
+            st.session_state["flash_success"] = "✅ Données rechargées en direct depuis Google Sheets !"
+            st.rerun()
+    with c_sync_d2:
+        if st.button("🚪 Déconnexion", key="btn_logout_drawer", use_container_width=True):
+            st.session_state["logged_user"] = None
+            st.session_state["active_editing_rencontre_id"] = None
+            st.session_state["flash_success"] = "Vous avez été déconnecté."
+            st.rerun()
 
 
 # =============================================================
