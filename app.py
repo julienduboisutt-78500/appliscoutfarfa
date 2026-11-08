@@ -3796,11 +3796,26 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_annuaire, tab_progression, tab_add_m = st.tabs([
+    FARFADETS_VIEWS = [
         "📋 Annuaire & Liens Familles", 
         "🌟 Progression des Farfadets (Les Grandir)", 
         "➕ Inscrire un membre"
-    ])
+    ]
+    if "farfadets_tab" not in st.session_state or st.session_state["farfadets_tab"] not in FARFADETS_VIEWS:
+        st.session_state["farfadets_tab"] = FARFADETS_VIEWS[0]
+
+    farfadets_choice = st.segmented_control(
+        "Navigation Farfadets",
+        options=FARFADETS_VIEWS,
+        default=st.session_state["farfadets_tab"],
+        selection_mode="single",
+        required=True,
+        width="stretch",
+        label_visibility="collapsed",
+        key="farfadets_seg_control"
+    )
+    cur_farfadets_tab = farfadets_choice or st.session_state["farfadets_tab"]
+    st.session_state["farfadets_tab"] = cur_farfadets_tab
 
     membres_list = current_ronde.get("membres", [])
     enfants_ronde = [m for m in membres_list if m.get("role") == "Enfant"]
@@ -3808,7 +3823,7 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
     respos_ronde = [m for m in membres_list if m.get("role") == "Responsable"]
 
     # 1. ANNUAIRE ET LIENS FAMILIAUX
-    with tab_annuaire:
+    if cur_farfadets_tab == "📋 Annuaire & Liens Familles":
         c_m1, c_m2, c_m3 = st.columns(3)
         with c_m1:
             st.metric("Total Farfadets (6-8 ans)", len(enfants_ronde))
@@ -3870,33 +3885,45 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                 dialog_inscrire_membre()
 
     # 2. SUIVI DE LA PROGRESSION DES FARFADETS (LES GRANDIR)
-    with tab_progression:
+    elif cur_farfadets_tab == "🌟 Progression des Farfadets (Les Grandir)":
         st.subheader("🌟 Suivi Pédagogique de la Progression : Les 6 Grandir")
-        st.caption("Dans la branche Farfadets (6-8 ans), chaque enfant chemine à son rythme à travers six axes de développement fondamentaux appelés les « Grandir ». Vous pouvez ici enregistrer le suivi progression de chaque étape sur 10, renseigner la date de validation (optionnelle) et observer l'évolution de la ronde.")
+        st.caption("Dans la branche Farfadets (6-8 ans), chaque enfant chemine à son rythme à travers six axes de développement fondamentaux appelés les « Grandir ». La validation d'un Grandir s'obtient avec une note de 10/10.")
 
         prog_list = current_ronde.setdefault("progressions", [])
 
         if not enfants_ronde:
             st.warning("Aucun enfant Farfadet n'est encore inscrit dans cette ronde pour enregistrer sa progression.")
         else:
-            k1, k2, k3 = st.columns(3)
+            k1, k2 = st.columns(2)
             with k1:
                 st.metric("Farfadets dans la ronde", len(enfants_ronde))
             with k2:
-                st.metric("Total des Grandir validés", len(prog_list))
-            with k3:
-                moy_note = round(sum(p.get("note", 0) for p in prog_list) / max(len(prog_list), 1), 1) if prog_list else 0.0
-                st.metric("Moyenne du suivi progression", f"{moy_note} / 10" if prog_list else "-")
+                valides_total = sum(1 for p in prog_list if safe_float(p.get("note", 0)) >= 10)
+                max_total = len(enfants_ronde) * 6
+                st.metric("Total des Grandir validés (10/10)", f"{valides_total} / {max_total}")
 
             st.markdown("---")
             st.markdown("#### 👤 Fiche individuelle d'un Farfadet")
             
             enfant_names_map = {c["id"]: f"{c.get('prenom')} {c.get('nom')}" for c in enfants_ronde}
+            enf_ids = list(enfant_names_map.keys())
+            cur_enf_id = st.session_state.get("sel_enf_id")
+            if cur_enf_id not in enf_ids:
+                cur_enf_id = enf_ids[0]
+            cur_idx_enf = enf_ids.index(cur_enf_id)
+
+            def _on_enfant_change():
+                st.session_state["sel_enf_id"] = st.session_state.get("select_farfadet_progression")
+
             sel_enf_id = st.selectbox(
                 "Sélectionner un Farfadet :",
-                options=list(enfant_names_map.keys()),
-                format_func=lambda cid: enfant_names_map.get(cid, f"#{cid}")
+                options=enf_ids,
+                index=cur_idx_enf,
+                format_func=lambda cid: enfant_names_map.get(cid, f"#{cid}"),
+                key="select_farfadet_progression",
+                on_change=_on_enfant_change
             )
+            st.session_state["sel_enf_id"] = sel_enf_id
 
             # Progrès de l'enfant sélectionné
             enf_progs = {p.get("grandir"): p for p in prog_list if p.get("enfant_id") == sel_enf_id}
@@ -3906,46 +3933,60 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                 with c_g_cols[gi % 3]:
                     val = enf_progs.get(g_name)
                     if val:
-                        note = val.get("note", 10)
+                        note = safe_float(val.get("note", 0))
+                        is_valide = (note >= 10)
                         d_reussite_raw = val.get("date_reussite", "")
                         d_reussite = format_date_fr(d_reussite_raw)
-                        val_date_html = f'<div style="font-size:11.5px; color:#166534; margin-top:2px;">✅ Validé le <b>{d_reussite}</b></div>' if d_reussite else '<div style="font-size:11.5px; color:#166534; margin-top:2px;">✅ Validé</div>'
                         com = val.get("commentaire", "")
-                        stars = "⭐" * max(1, min(int(round(note / 2)), 5))
+                        
+                        if is_valide:
+                            val_date_html = f'<div style="font-size:12px; color:#166534; font-weight:700; margin-top:4px;">✅ Statut : <b>Validé (10/10)</b>{f" le {d_reussite}" if d_reussite else ""}</div>'
+                            badge_note = '<span style="background:#DCFCE7; color:#15803D; font-weight:800; padding:3px 10px; border-radius:8px; font-size:13.5px;">10 / 10 ⭐⭐⭐⭐⭐</span>'
+                            card_style = "background:#F0FDF4; border:1.5px solid #86EFAC;"
+                        else:
+                            note_display = int(note) if note.is_integer() else note
+                            val_date_html = f'<div style="font-size:12px; color:#B45309; font-weight:600; margin-top:4px;">⏳ Statut : <b>En cours d\'apprentissage</b> (non validé)</div>'
+                            badge_note = f'<span style="background:#FEF3C7; color:#B45309; font-weight:800; padding:3px 10px; border-radius:8px; font-size:13.5px;">Niveau : {note_display} / 10</span>'
+                            card_style = "background:#FFFBEB; border:1px solid #FCD34D;"
+
                         st.markdown(f"""
-                            <div style="background:#F0FDF4; border:1px solid #86EFAC; border-radius:10px; padding:12px; margin-bottom:10px; min-height:130px;">
-                                <div style="font-weight:700; color:#166534; font-size:13.5px;">{g_name}</div>
-                                <div style="font-size:16px; font-weight:800; color:#15803D; margin-top:4px;">Suivi progression : {note} / 10 <span style="font-size:13px;">{stars}</span></div>
+                            <div style="{card_style} border-radius:10px; padding:12px; margin-bottom:10px; min-height:135px;">
+                                <div style="font-weight:700; color:#1E293B; font-size:13.5px;">{g_name}</div>
+                                <div style="margin-top:6px;">{badge_note}</div>
                                 {val_date_html}
-                                <div style="font-size:12px; color:#334155; margin-top:6px; font-style:italic;">{com if com else "Aucun commentaire"}</div>
+                                <div style="font-size:12px; color:#475569; margin-top:6px; font-style:italic;">{com if com else "Aucun commentaire"}</div>
                             </div>
                         """, unsafe_allow_html=True)
                     else:
                         st.markdown(f"""
-                            <div style="background:#F8FAFC; border:1px dashed #CBD5E1; border-radius:10px; padding:12px; margin-bottom:10px; min-height:130px;">
+                            <div style="background:#F8FAFC; border:1px dashed #CBD5E1; border-radius:10px; padding:12px; margin-bottom:10px; min-height:135px;">
                                 <div style="font-weight:600; color:#64748B; font-size:13.5px;">{g_name}</div>
-                                <div style="font-size:13px; color:#94A3B8; margin-top:14px;">⏳ En cours d'apprentissage</div>
-                                <div style="font-size:11.5px; color:#94A3B8; margin-top:4px;">Non validé</div>
+                                <div style="font-size:13px; color:#94A3B8; margin-top:14px;">⏳ Non évalué</div>
+                                <div style="font-size:11.5px; color:#94A3B8; margin-top:4px;">Statut : Non validé</div>
                             </div>
                         """, unsafe_allow_html=True)
 
             # FORMULAIRE POUR VALIDER OU METTRE À JOUR UN GRANDIR
             if is_responsable_or_admin():
                 st.markdown("---")
-                with st.expander(f"➕ Suivi progression d'un Grandir pour **{enfant_names_map.get(sel_enf_id)}**"):
+                with st.expander(f"➕ Évaluer ou valider un Grandir pour **{enfant_names_map.get(sel_enf_id)}**"):
                     with st.form(f"form_note_grandir_{sel_enf_id}"):
-                        g_choix = st.selectbox("Grandir à évaluer (suivi progression) :", GRANDIR_OPTIONS)
+                        g_choix = st.selectbox("Grandir à évaluer :", GRANDIR_OPTIONS)
                         ex_val = enf_progs.get(g_choix, {})
                         c_n1, c_n2 = st.columns(2)
                         with c_n1:
-                            note_val = st.slider("Suivi progression sur 10 :", min_value=1, max_value=10, value=int(ex_val.get("note", 8)))
+                            note_val = st.slider("Niveau de progression sur 10 (10/10 requis pour valider) :", min_value=1, max_value=10, value=int(ex_val.get("note", 10)))
+                            if note_val == 10:
+                                st.caption("✅ **10/10 : Le statut sera marqué comme VALIDÉ.**")
+                            else:
+                                st.caption(f"⏳ **{note_val}/10 : Le statut sera EN COURS D'APPRENTISSAGE (non validé).**")
                         with c_n2:
-                            d_initial = parse_date_obj(ex_val.get("date_reussite"), default_today=False)
-                            date_reussite_val = st.date_input("Date de validation (optionnelle) :", value=d_initial, format="DD/MM/YYYY")
+                            d_initial = parse_date_obj(ex_val.get("date_reussite"), default_today=(note_val == 10))
+                            date_reussite_val = st.date_input("Date de validation (si 10/10) :", value=d_initial, format="DD/MM/YYYY")
                         com_val = st.text_area("Observation pédagogique / Commentaires :", value=ex_val.get("commentaire", ""), placeholder="Ex : Très belle participation, a su aider son voisin lors du jeu...", height=70)
 
-                        if st.form_submit_button("💾 Enregistrer le suivi progression du Farfadet", type="primary", use_container_width=True):
-                            d_save = parse_date_to_iso(date_reussite_val) if date_reussite_val else ""
+                        if st.form_submit_button("💾 Enregistrer la progression du Farfadet", type="primary", use_container_width=True):
+                            d_save = parse_date_to_iso(date_reussite_val) if (date_reussite_val and note_val == 10) else (parse_date_to_iso(date_reussite_val) if date_reussite_val else "")
                             existing = next((p for p in prog_list if p.get("enfant_id") == sel_enf_id and p.get("grandir") == g_choix), None)
                             if existing:
                                 existing["note"] = note_val
@@ -3963,7 +4004,10 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                                     "commentaire": com_val
                                 })
                             save_data(db)
-                            st.session_state["flash_success"] = f"✅ Suivi progression '{g_choix}' enregistré pour {enfant_names_map.get(sel_enf_id)} !"
+                            st.session_state["farfadets_tab"] = "🌟 Progression des Farfadets (Les Grandir)"
+                            st.session_state["sel_enf_id"] = sel_enf_id
+                            statut_txt = "validé (10/10) 🎉" if note_val == 10 else f"enregistré à {note_val}/10 (en cours)"
+                            st.session_state["flash_success"] = f"✅ Progression '{g_choix}' : {statut_txt} pour {enfant_names_map.get(sel_enf_id)} !"
                             st.rerun()
 
             # TABLEAU RÉCAPITULATIF DE TOUS LES FARFADETS
@@ -3973,47 +4017,68 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
             for c in enfants_ronde:
                 cid = c["id"]
                 c_p_map = {p.get("grandir"): p for p in prog_list if p.get("enfant_id") == cid}
-                notes_c = [p.get("note", 0) for p in c_p_map.values()]
+                
+                def _format_cell(g_key):
+                    if g_key not in c_p_map:
+                        return "-"
+                    p = c_p_map[g_key]
+                    n = safe_float(p.get("note", 0))
+                    if n >= 10:
+                        return "✅ 10/10"
+                    n_disp = int(n) if n.is_integer() else n
+                    return f"⏳ {n_disp}/10"
+
+                nb_valides = sum(1 for p in c_p_map.values() if safe_float(p.get("note", 0)) >= 10)
+                
                 row = {
                     "Farfadet": f"{c.get('prenom')} {c.get('nom')}",
-                    "🤝 Autres": f"{c_p_map['🤝 Grandir avec les autres'].get('note')}/10" if '🤝 Grandir avec les autres' in c_p_map else "-",
-                    "🏃 Corps": f"{c_p_map['🏃 Grandir avec son corps'].get('note')}/10" if '🏃 Grandir avec son corps' in c_p_map else "-",
-                    "🦉 Sagesse": f"{c_p_map['🦉 Grandir avec sagesse'].get('note')}/10" if '🦉 Grandir avec sagesse' in c_p_map else "-",
-                    "🎨 Mains/Tête": f"{c_p_map['🎨 Grandir avec ses mains et sa tête'].get('note')}/10" if '🎨 Grandir avec ses mains et sa tête' in c_p_map else "-",
-                    "🕊️ Jésus": f"{c_p_map['🕊️ Grandir avec Jésus'].get('note')}/10" if '🕊️ Grandir avec Jésus' in c_p_map else "-",
-                    "❤️ Cœur": f"{c_p_map['❤️ Grandir avec son cœur'].get('note')}/10" if '❤️ Grandir avec son cœur' in c_p_map else "-",
-                    "Grandir validés": f"{len(c_p_map)} / 6",
-                    "Moyenne suivi progression": f"{round(sum(notes_c) / len(notes_c), 1)}/10" if notes_c else "-"
+                    "🤝 Autres": _format_cell('🤝 Grandir avec les autres'),
+                    "🏃 Corps": _format_cell('🏃 Grandir avec son corps'),
+                    "🦉 Sagesse": _format_cell('🦉 Grandir avec sagesse'),
+                    "🎨 Mains/Tête": _format_cell('🎨 Grandir avec ses mains et sa tête'),
+                    "🕊️ Jésus": _format_cell('🕊️ Grandir avec Jésus'),
+                    "❤️ Cœur": _format_cell('❤️ Grandir avec son cœur'),
+                    "Grandir validés (10/10)": f"{nb_valides} / 6"
                 }
                 recap_rows.append(row)
             st.dataframe(pd.DataFrame(recap_rows), use_container_width=True, hide_index=True)
 
             # JOURNAL DES ENREGISTREMENTS AVEC SUPPRESSION
             if prog_list and is_responsable_or_admin():
-                with st.expander("📜 Journal détaillé des validations enregistrées"):
+                with st.expander("📜 Journal détaillé des enregistrements"):
                     for pi, pr in enumerate(prog_list):
-                        cp1, cp2, cp3, cp4 = st.columns([2.5, 3, 1.4, 1])
+                        cp1, cp2, cp3, cp4 = st.columns([2.5, 3, 1.8, 0.8])
+                        n_pr = safe_float(pr.get('note', 0))
+                        is_val = (n_pr >= 10)
                         with cp1:
                             st.markdown(f"**{pr.get('enfant_nom')}**")
                             d_pr_raw = pr.get('date_reussite')
-                            d_pr_str = f"Validé le {format_date_fr(d_pr_raw)}" if d_pr_raw else "Validé"
+                            if is_val:
+                                d_pr_str = f"✅ Validé le {format_date_fr(d_pr_raw)}" if d_pr_raw else "✅ Validé (10/10)"
+                            else:
+                                d_pr_str = "⏳ En cours d'apprentissage"
                             st.caption(d_pr_str)
                         with cp2:
                             st.markdown(f"{pr.get('grandir')}")
                             if pr.get('commentaire'):
                                 st.caption(pr.get('commentaire'))
                         with cp3:
-                            st.markdown(f'<span style="background:#DCFCE7; color:#166534; font-weight:700; padding:2px 8px; border-radius:10px;">⭐ Progression : {pr.get("note")}/10</span>', unsafe_allow_html=True)
+                            if is_val:
+                                st.markdown('<span style="background:#DCFCE7; color:#166534; font-weight:700; padding:2px 8px; border-radius:10px;">✅ Validé (10/10)</span>', unsafe_allow_html=True)
+                            else:
+                                n_disp = int(n_pr) if n_pr.is_integer() else n_pr
+                                st.markdown(f'<span style="background:#FEF3C7; color:#B45309; font-weight:700; padding:2px 8px; border-radius:10px;">⏳ En cours ({n_disp}/10)</span>', unsafe_allow_html=True)
                         with cp4:
-                            if st.button("🗑️", key=f"del_prog_{pr.get('id', pi)}", help="Supprimer cette validation"):
+                            if st.button("🗑️", key=f"del_prog_{pr.get('id', pi)}", help="Supprimer cet enregistrement"):
                                 prog_list.pop(pi)
                                 save_data(db)
-                                st.session_state["flash_success"] = "🗑️ Validation supprimée."
+                                st.session_state["farfadets_tab"] = "🌟 Progression des Farfadets (Les Grandir)"
+                                st.session_state["flash_success"] = "🗑️ Enregistrement supprimé."
                                 st.rerun()
                         st.markdown('<hr style="margin:2px 0 6px 0; border:0; border-top:1px solid #E2E8F0;">', unsafe_allow_html=True)
 
     # 3. INSCRIRE UN NOUVEAU MEMBRE
-    with tab_add_m:
+    elif cur_farfadets_tab == "➕ Inscrire un membre":
         if not is_responsable_or_admin():
             st.info("ℹ️ L'inscription d'un nouveau membre est réservée aux animateurs et administrateurs.")
         else:
@@ -4067,6 +4132,7 @@ elif st.session_state["nav_page"] == "👥 Farfadets & Familles":
                             sync_parent_child_links(current_ronde, new_m_id, sel_c_pg, is_child=False)
                         save_data(db)
                         st.session_state["flash_success"] = f"✅ Membre {p_prenom} {p_nom} ({p_role}) ajouté avec succès !"
+                        st.session_state["farfadets_tab"] = "📋 Annuaire & Liens Familles"
                         st.rerun()
                     else:
                         st.error("Le prénom et le nom sont requis.")
