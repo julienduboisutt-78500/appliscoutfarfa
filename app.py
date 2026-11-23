@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, time
 import calendar
 import json
 import os
@@ -120,6 +120,103 @@ def add_minutes_to_time_str(time_str, minutes=30):
     except Exception:
         return "15:00"
 
+def parse_time_str(t_str, default_time=time(14, 0)):
+    if isinstance(t_str, time):
+        return t_str
+    if not t_str or not isinstance(t_str, str):
+        return default_time
+    parts = re.findall(r"\d{1,2}", str(t_str).strip())
+    if len(parts) >= 2:
+        try:
+            h = int(parts[0]) % 24
+            m = int(parts[1]) % 60
+            return time(h, m)
+        except Exception:
+            pass
+    elif len(parts) == 1:
+        try:
+            h = int(parts[0]) % 24
+            return time(h, 0)
+        except Exception:
+            pass
+    return default_time
+
+def parse_horaire_range(horaire_str, default_start=time(14, 0), default_end=time(17, 0)):
+    if not horaire_str:
+        return default_start, default_end
+    raw_s = str(horaire_str).replace("à", "-").replace("au", "-").replace("/", "-")
+    chunks = [c.strip() for c in raw_s.split("-") if c.strip()]
+    if len(chunks) >= 2:
+        return parse_time_str(chunks[0], default_start), parse_time_str(chunks[1], default_end)
+    elif len(chunks) == 1:
+        return parse_time_str(chunks[0], default_start), default_end
+    return default_start, default_end
+
+def time_to_minutes(t_val):
+    if isinstance(t_val, str):
+        t_val = parse_time_str(t_val)
+    return t_val.hour * 60 + t_val.minute
+
+def minutes_to_time_str(m_val):
+    m_val = m_val % (24 * 60)
+    return f"{m_val // 60:02d}:{m_val % 60:02d}"
+
+def get_step_duration_minutes(s, default_duration=30):
+    deb_m = time_to_minutes(s.get("heure_debut", "14:00"))
+    fin_m = time_to_minutes(s.get("heure_fin", "14:30"))
+    dur = fin_m - deb_m
+    return dur if dur > 0 else default_duration
+
+def recompute_coherent_deroule_times(deroule, start_time_str=None):
+    """
+    Recalcule les horaires de tout le déroulé en enchaînant les activités de manière cohérente :
+    l'activité 1 démarre à start_time_str (ou son heure actuelle),
+    l'activité 2 démarre exactement à la fin de l'activité 1, etc.,
+    en préservant la durée de chaque activité.
+    """
+    if not deroule:
+        return deroule
+    first_start = start_time_str or deroule[0].get("heure_debut", "14:00")
+    cur_m = time_to_minutes(first_start)
+    for s in deroule:
+        dur = get_step_duration_minutes(s)
+        s["heure_debut"] = minutes_to_time_str(cur_m)
+        cur_m += dur
+        s["heure_fin"] = minutes_to_time_str(cur_m)
+    return deroule
+
+def sort_and_recompute_deroule(deroule, start_time_str=None):
+    """
+    Trie les activités par ordre chronologique d'heure de début,
+    puis recalcule et aligne les horaires en séquence continue.
+    """
+    if not deroule:
+        return deroule
+    sorted_d = sorted(deroule, key=lambda s: time_to_minutes(s.get("heure_debut", "14:00")))
+    first_time = start_time_str or (sorted_d[0].get("heure_debut", "14:00") if sorted_d else "14:00")
+    return recompute_coherent_deroule_times(sorted_d, first_time)
+
+def check_deroule_coherence(deroule):
+    """
+    Vérifie la cohérence des horaires entre chaque étape.
+    Retourne une liste d'avertissements s'il y a des incohérences (ex: fin <= début, chevauchements).
+    """
+    warnings = []
+    for i, s in enumerate(deroule):
+        deb_m = time_to_minutes(s.get("heure_debut", "14:00"))
+        fin_m = time_to_minutes(s.get("heure_fin", "14:30"))
+        act_name = s.get("activite", f"Étape #{i+1}")
+        if fin_m <= deb_m:
+            warnings.append(f"⚠️ **{act_name}** (#{i+1}) : l'heure de fin ({s.get('heure_fin')}) est antérieure ou égale à l'heure de début ({s.get('heure_debut')}).")
+        if i > 0:
+            prev_s = deroule[i - 1]
+            prev_name = prev_s.get("activite", f"Étape #{i}")
+            prev_fin_m = time_to_minutes(prev_s.get("heure_fin", "14:00"))
+            if deb_m < prev_fin_m:
+                diff = prev_fin_m - deb_m
+                warnings.append(f"⚠️ **Chevauchement ({diff} min)** : **{act_name}** (#{i+1}) commence à {s.get('heure_debut')}, avant la fin de **{prev_name}** ({prev_s.get('heure_fin')}).")
+    return warnings
+
 def file_to_base64(uploaded_file):
     if uploaded_file is not None:
         b64 = base64.b64encode(uploaded_file.getvalue()).decode()
@@ -147,6 +244,9 @@ def normalize_rencontre_data(r):
     r.setdefault("imaginaire_rencontre", "")
     r.setdefault("objectifs", "")
     r.setdefault("compte_rendu", "")
+    r.setdefault("compte_rendu_grandir", {})
+    if r.get("compte_rendu") and not r.get("compte_rendu_grandir"):
+        r["compte_rendu_grandir"] = get_meeting_cr_grandir(r)
     r.setdefault("photo", "")
     r.setdefault("lieu_adresse", r.get("lieu", "Local Scout - Sartrouville"))
     r["lat"] = safe_float(r.get("lat"), 48.9417)
@@ -165,7 +265,12 @@ def normalize_rencontre_data(r):
             "activite": step.get("activite", ""),
             "animateur": step.get("animateur", step.get("responsable", r.get("animateur", ""))),
             "commentaire": step.get("commentaire", ""),
-            "materiels": step.get("materiels", [step.get("materiel")] if step.get("materiel") else [])
+            "materiels": step.get("materiels", [step.get("materiel")] if step.get("materiel") else []),
+            "evaluation": step.get("evaluation", {
+                "comment_s_est_passe": "",
+                "ce_qui_a_marche": "",
+                "ce_qui_n_a_pas_marche": ""
+            })
         }
         for k, v in step.items():
             if k not in d_item:
@@ -278,6 +383,46 @@ GRANDIR_OPTIONS = [
     "🕊️ Grandir avec Jésus",
     "❤️ Grandir avec son cœur"
 ]
+
+def get_meeting_cr_grandir(r):
+    """
+    Récupère le compte-rendu sous forme de dictionnaire structuré pour les 6 Grandir.
+    Extrait les données soit du dictionnaire 'compte_rendu_grandir', soit en analysant le texte 'compte_rendu'.
+    """
+    if not r:
+        return {g: "" for g in GRANDIR_OPTIONS}
+    cr_g = r.get("compte_rendu_grandir")
+    if isinstance(cr_g, dict) and cr_g:
+        return {g: str(cr_g.get(g, "")) for g in GRANDIR_OPTIONS}
+    
+    res = {g: "" for g in GRANDIR_OPTIONS}
+    raw_cr = str(r.get("compte_rendu", "") or "").strip()
+    if not raw_cr:
+        return res
+    
+    found_any = False
+    for g in GRANDIR_OPTIONS:
+        pattern = re.escape(g)
+        m = re.search(r"(?:^|\n)#{1,3}\s*" + pattern + r"\s*\n(.*?)(?=\n#{1,3}\s*|\Z)", raw_cr, re.DOTALL)
+        if m:
+            res[g] = m.group(1).strip()
+            found_any = True
+    if not found_any:
+        res[GRANDIR_OPTIONS[0]] = raw_cr
+    return res
+
+def format_cr_grandir_text(cr_dict):
+    """
+    Formate le dictionnaire des 6 Grandir en texte Markdown clair pour compatibilité et affichage.
+    """
+    if not cr_dict or not isinstance(cr_dict, dict):
+        return ""
+    chunks = []
+    for g in GRANDIR_OPTIONS:
+        txt = (cr_dict.get(g) or "").strip()
+        if txt:
+            chunks.append(f"### {g}\n{txt}")
+    return "\n\n".join(chunks)
 
 def sync_parent_child_links(ronde, member_id, new_linked_ids, is_child):
     """
@@ -1713,7 +1858,6 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # Message flash de validation persistant
 if "flash_success" in st.session_state and st.session_state["flash_success"]:
     st.success(st.session_state["flash_success"])
-    st.toast(st.session_state["flash_success"])
     del st.session_state["flash_success"]
 
 
@@ -2169,7 +2313,12 @@ def dialog_modifier_rencontre(rencontre_id):
                 d_val = parse_date_obj(r.get("date", date.today()))
                 d_date = st.date_input("Date de la rencontre (JJ/MM/AAAA)", value=d_val, format="DD/MM/YYYY")
             with c2:
-                horaire = st.text_input("Créneau horaire", value=r.get("horaire", "14:00 - 17:00"))
+                def_deb_r, def_fin_r = parse_horaire_range(r.get("horaire", "14:00 - 17:00"))
+                c_th1, c_th2 = st.columns(2)
+                with c_th1:
+                    h_deb_r = st.time_input("Heure début *", value=def_deb_r, step=300, key=f"r_time_deb_{rencontre_id}")
+                with c_th2:
+                    h_fin_r = st.time_input("Heure fin *", value=def_fin_r, step=300, key=f"r_time_fin_{rencontre_id}")
                 statut_opts = ["À venir", "Terminé", "Annulé"]
                 statut_idx = statut_opts.index(r.get("statut", "À venir")) if r.get("statut") in statut_opts else 0
                 statut = st.selectbox("Statut", statut_opts, index=statut_idx)
@@ -2203,23 +2352,26 @@ def dialog_modifier_rencontre(rencontre_id):
                 lon = st.number_input("Longitude GPS", value=safe_float(r.get("lon"), 2.1645), format="%.5f")
 
             if st.form_submit_button("Enregistrer les informations générales", type="primary", use_container_width=True):
-                r["titre"] = titre
-                r["type"] = type_r
-                r["date"] = parse_date_to_iso(d_date)
-                r["horaire"] = horaire
-                r["animateur"] = combine_animators(sel_anim, autre_anim)
-                r["statut"] = statut
-                r["lieu"] = lieu
-                r["lieu_adresse"] = lieu_adr
-                r["lat"] = lat
-                r["lon"] = lon
-                save_data(db)
-                st.session_state[f"_force_tab_{rencontre_id}"] = "📋 Informations Générales"
-                st.session_state[cur_tab_key] = "📋 Informations Générales"
-                st.session_state["flash_success"] = f"✅ Rencontre mise à jour au {format_date_fr(r['date'])} !"
-                st.rerun()
+                if h_fin_r <= h_deb_r:
+                    st.error("L'heure de fin de la rencontre doit être strictement postérieure à l'heure de début.")
+                else:
+                    r["titre"] = titre
+                    r["type"] = type_r
+                    r["date"] = parse_date_to_iso(d_date)
+                    r["horaire"] = f"{h_deb_r.strftime('%H:%M')} - {h_fin_r.strftime('%H:%M')}"
+                    r["animateur"] = combine_animators(sel_anim, autre_anim)
+                    r["statut"] = statut
+                    r["lieu"] = lieu
+                    r["lieu_adresse"] = lieu_adr
+                    r["lat"] = lat
+                    r["lon"] = lon
+                    save_data(db)
+                    st.session_state[f"_force_tab_{rencontre_id}"] = "📋 Informations Générales"
+                    st.session_state[cur_tab_key] = "📋 Informations Générales"
+                    st.session_state["flash_success"] = f"✅ Rencontre mise à jour au {format_date_fr(r['date'])} !"
+                    st.rerun()
 
-    # 2. DÉROULÉ CHRONOLOGIQUE (TABLEAU INTERACTIF AVEC ÉCRAN MODIFIER ET ÉCRAN AJOUTER)
+    # 2. DÉROULÉ CHRONOLOGIQUE (TABLEAU INTERACTIF AVEC ÉCRAN MODIFIER, ÉCRAN AJOUTER ET ÉCRAN ÉVALUER)
     elif cur_modal_tab == "⏱️ Déroulé chronologique":
         st.markdown("#### ⏱️ Déroulé chronologique de la rencontre")
         deroule_list = r.get("deroule", [])
@@ -2230,11 +2382,16 @@ def dialog_modifier_rencontre(rencontre_id):
 
         cur_edit_step_key = f"editing_step_idx_{rencontre_id}"
         cur_add_step_key = f"adding_step_{rencontre_id}"
+        cur_eval_step_key = f"evaluating_step_idx_{rencontre_id}"
         cur_insert_pos_key = f"insert_pos_idx_{rencontre_id}"
         cur_suggested_deb_key = f"suggested_deb_{rencontre_id}"
         cur_suggested_fin_key = f"suggested_fin_{rencontre_id}"
         editing_idx = st.session_state.get(cur_edit_step_key, None)
         is_adding = st.session_state.get(cur_add_step_key, False)
+        evaluating_idx = st.session_state.get(cur_eval_step_key, None)
+
+        # Base horaire de référence pour le recalcul des enchaînements
+        r_base_start = r.get("horaire", "14:00 - 17:00").split("-")[0].strip()
 
         # ÉCRAN 1 : MODIFICATION D'UNE LIGNE PRÉCISE DU TABLEAU
         if editing_idx is not None and 0 <= editing_idx < len(deroule_list):
@@ -2256,9 +2413,9 @@ def dialog_modifier_rencontre(rencontre_id):
                     m_s_act = st.text_input("Activité *", value=cur_s.get("activite", ""))
                     c_time1, c_time2 = st.columns(2)
                     with c_time1:
-                        m_s_deb = st.text_input("Heure début", value=cur_s.get("heure_debut", "14:00"))
+                        m_s_deb_t = st.time_input("Heure début *", value=parse_time_str(cur_s.get("heure_debut", "14:00")), step=300, key=f"ms_t_deb_{rencontre_id}_{editing_idx}")
                     with c_time2:
-                        m_s_fin = st.text_input("Heure fin", value=cur_s.get("heure_fin", "14:30"))
+                        m_s_fin_t = st.time_input("Heure fin *", value=parse_time_str(cur_s.get("heure_fin", "14:30")), step=300, key=f"ms_t_fin_{rencontre_id}_{editing_idx}")
                 with col_ms2:
                     current_step_mats = cur_s.get("materiels", [])
                     avail_mats = list(set(mat_noms + current_step_mats))
@@ -2320,11 +2477,13 @@ def dialog_modifier_rencontre(rencontre_id):
                 if sub_edit:
                     if not m_s_act:
                         st.error("Le nom de l'activité est obligatoire.")
+                    elif m_s_fin_t <= m_s_deb_t:
+                        st.error("L'heure de fin de l'activité doit être strictement postérieure à l'heure de début.")
                     else:
                         cur_s["date"] = format_date_fr(m_s_date)
                         cur_s["activite"] = m_s_act
-                        cur_s["heure_debut"] = m_s_deb
-                        cur_s["heure_fin"] = m_s_fin
+                        cur_s["heure_debut"] = m_s_deb_t.strftime("%H:%M")
+                        cur_s["heure_fin"] = m_s_fin_t.strftime("%H:%M")
                         cur_s["animateur"] = combine_animators(m_s_sel_anim, m_s_oth_anim)
                         cur_s["materiels"] = m_s_mats
                         cur_s["commentaire"] = m_s_com
@@ -2334,6 +2493,7 @@ def dialog_modifier_rencontre(rencontre_id):
                         if len(deroule_list) > 1 and m_s_pos != editing_idx:
                             moved_step = deroule_list.pop(editing_idx)
                             deroule_list.insert(m_s_pos, moved_step)
+                            r["deroule"] = recompute_coherent_deroule_times(deroule_list, r_base_start)
 
                         save_data(db)
                         st.session_state[cur_edit_step_key] = None
@@ -2344,12 +2504,12 @@ def dialog_modifier_rencontre(rencontre_id):
 
             if st.button("🗑️ Supprimer cette étape du déroulé", key=f"btn_del_editing_step_{rencontre_id}", type="secondary"):
                 deroule_list.pop(editing_idx)
-                r["deroule"] = deroule_list
+                r["deroule"] = recompute_coherent_deroule_times(deroule_list, r_base_start)
                 save_data(db)
                 st.session_state[cur_edit_step_key] = None
                 st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                 st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                st.session_state["flash_success"] = "✅ Étape retirée du déroulé."
+                st.session_state["flash_success"] = "✅ Étape retirée du déroulé et horaires réalignés."
                 st.rerun()
 
         # ÉCRAN 2 : SAISIE POUR AJOUTER OU INTERCALER UNE NOUVELLE ACTIVITÉ
@@ -2374,8 +2534,8 @@ def dialog_modifier_rencontre(rencontre_id):
                     def_h_deb = prev_s.get("heure_fin", "14:00")
                     def_h_fin = add_minutes_to_time_str(def_h_deb, 30)
             else:
-                def_h_deb = "14:00"
-                def_h_fin = "14:30"
+                def_h_deb = r_base_start or "14:00"
+                def_h_fin = add_minutes_to_time_str(def_h_deb, 30)
 
             c_back, c_title = st.columns([1.2, 4])
             with c_back:
@@ -2398,7 +2558,6 @@ def dialog_modifier_rencontre(rencontre_id):
 
             add_s_def_sel, add_s_def_oth = parse_animators_string(r.get("animateur", ""), adult_opts, comm_opts)
             with st.form(f"form_add_step_{rencontre_id}_{cur_ins_pos}", clear_on_submit=True):
-                # Si le déroulé contient déjà des activités, proposer le choix d'emplacement pour intercaler
                 step_pos_choice = cur_ins_pos
                 if deroule_list:
                     pos_options = []
@@ -2430,9 +2589,9 @@ def dialog_modifier_rencontre(rencontre_id):
                     step_act = st.text_input("Nom de l'activité *", placeholder="Ex : Grand jeu de piste")
                     c_sth1, c_sth2 = st.columns(2)
                     with c_sth1:
-                        step_h_deb = st.text_input("Heure début *", value=def_h_deb)
+                        step_h_deb_t = st.time_input("Heure début *", value=parse_time_str(def_h_deb), step=300, key=f"add_s_deb_t_{rencontre_id}")
                     with c_sth2:
-                        step_h_fin = st.text_input("Heure fin *", value=def_h_fin)
+                        step_h_fin_t = st.time_input("Heure fin *", value=parse_time_str(def_h_fin), step=300, key=f"add_s_fin_t_{rencontre_id}")
                 with col_s2:
                     step_mats = st.multiselect("Matériels nécessaires", options=mat_noms if mat_noms else ["Foulards", "Goûter", "Boussoles"])
                     step_com = st.text_area("Commentaire / Consigne d'animation :", placeholder="Ex : Diviser la ronde en deux équipes, règles du jeu, consignes de sécurité...", height=110)
@@ -2478,15 +2637,22 @@ def dialog_modifier_rencontre(rencontre_id):
                 if sub_add:
                     if not step_act:
                         st.error("Le nom de l'activité est obligatoire.")
+                    elif step_h_fin_t <= step_h_deb_t:
+                        st.error("L'heure de fin de l'activité doit être strictement postérieure à l'heure de début.")
                     else:
                         new_step = {
                             "date": format_date_fr(step_date),
-                            "heure_debut": step_h_deb,
-                            "heure_fin": step_h_fin,
+                            "heure_debut": step_h_deb_t.strftime("%H:%M"),
+                            "heure_fin": step_h_fin_t.strftime("%H:%M"),
                             "activite": step_act,
                             "animateur": combine_animators(step_sel_anim, step_oth_anim),
                             "materiels": step_mats,
-                            "commentaire": step_com
+                            "commentaire": step_com,
+                            "evaluation": {
+                                "comment_s_est_passe": "",
+                                "ce_qui_a_marche": "",
+                                "ce_qui_n_a_pas_marche": ""
+                            }
                         }
                         for cname, cval in new_custom_vals.items():
                             new_step[cname] = cval
@@ -2496,6 +2662,7 @@ def dialog_modifier_rencontre(rencontre_id):
                             r.setdefault("deroule", []).append(new_step)
                         else:
                             r.setdefault("deroule", []).insert(target_pos, new_step)
+                            r["deroule"] = recompute_coherent_deroule_times(r["deroule"], r_base_start)
 
                         save_data(db)
                         st.session_state[cur_add_step_key] = False
@@ -2507,7 +2674,67 @@ def dialog_modifier_rencontre(rencontre_id):
                         st.session_state["flash_success"] = f"✅ Activité '{step_act}' insérée au déroulé !"
                         st.rerun()
 
-        # ÉCRAN 3 : AFFICHAGE DU TABLEAU AVEC ACTIONS SUR CHAQUE LIGNE ET BOUTON D'AJOUT À LA SUITE
+        # ÉCRAN 3 : ÉVALUATION DÉTAILLÉE DE L'ACTIVITÉ (Comment ça s'est passé, Ce qui a marché, Ce qui n'a pas marché)
+        elif evaluating_idx is not None and 0 <= evaluating_idx < len(deroule_list):
+            cur_s = deroule_list[evaluating_idx]
+            cur_eval = cur_s.get("evaluation")
+            if not isinstance(cur_eval, dict):
+                cur_eval = {}
+
+            c_back, c_title = st.columns([1.2, 4])
+            with c_back:
+                if st.button("← Retour au tableau", key=f"btn_back_eval_{rencontre_id}", use_container_width=True):
+                    st.session_state[cur_eval_step_key] = None
+                    st.rerun()
+            with c_title:
+                st.markdown(f"##### ⭐ Évaluation de l'étape #{evaluating_idx + 1} : **{cur_s.get('activite', '')}**")
+                st.caption(f"Horaires : **{cur_s.get('heure_debut', '')} - {cur_s.get('heure_fin', '')}** | Animateur : {cur_s.get('animateur', '-')}")
+
+            st.info("💡 Évaluez cette activité pour garder la mémoire de son déroulement et aider les prochains animateurs.")
+            with st.form(f"form_eval_step_{rencontre_id}_{evaluating_idx}"):
+                ev_comment = st.text_area(
+                    "1️⃣ Comment ça s'est passé ? *",
+                    value=cur_eval.get("comment_s_est_passe", ""),
+                    height=100,
+                    placeholder="Ressenti général, dynamisme du groupe, participation des enfants, temps d'attention..."
+                )
+                ev_marche = st.text_area(
+                    "2️⃣ Ce qui a marché :",
+                    value=cur_eval.get("ce_qui_a_marche", ""),
+                    height=90,
+                    placeholder="Points forts, succès de la règle du jeu, immersion dans l'imaginaire, bonne coopération..."
+                )
+                ev_pas_marche = st.text_area(
+                    "3️⃣ Ce qui n'a pas marché / À améliorer :",
+                    value=cur_eval.get("ce_qui_n_a_pas_marche", ""),
+                    height=90,
+                    placeholder="Points de blocage, durée trop longue, matériel manquant, consignes à simplifier..."
+                )
+
+                col_eb1, col_eb2 = st.columns([3, 1])
+                with col_eb1:
+                    sub_eval = st.form_submit_button("💾 Enregistrer l'évaluation", type="primary", use_container_width=True)
+                with col_eb2:
+                    sub_eval_canc = st.form_submit_button("Annuler", use_container_width=True)
+
+                if sub_eval_canc:
+                    st.session_state[cur_eval_step_key] = None
+                    st.rerun()
+
+                if sub_eval:
+                    cur_s["evaluation"] = {
+                        "comment_s_est_passe": ev_comment.strip(),
+                        "ce_qui_a_marche": ev_marche.strip(),
+                        "ce_qui_n_a_pas_marche": ev_pas_marche.strip()
+                    }
+                    save_data(db)
+                    st.session_state[cur_eval_step_key] = None
+                    st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                    st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                    st.session_state["flash_success"] = f"⭐ Évaluation de '{cur_s.get('activite')}' enregistrée !"
+                    st.rerun()
+
+        # ÉCRAN 4 : AFFICHAGE DU TABLEAU AVEC ACTIONS, TRI, CONTRÔLES ET COMPTE-RENDU DES 6 GRANDIR
         else:
             with st.expander("⚙️ Personnaliser les colonnes du tableau (Ajouter / Supprimer des colonnes)"):
                 st.caption("Vous pouvez ajouter des colonnes supplémentaires pour stocker toute information nécessaire (ex: Lieu précis, Consigne sécurité, Météo...).")
@@ -2540,16 +2767,41 @@ def dialog_modifier_rencontre(rencontre_id):
                             else:
                                 st.warning("Cette colonne existe déjà ou est un champ par défaut.")
 
+            # CONTRÔLE DE COHÉRENCE DES HORAIRES
+            coherence_warnings = check_deroule_coherence(deroule_list)
+            if coherence_warnings:
+                w_lines = "\n".join([f"• {w}" for w in coherence_warnings])
+                st.warning(f"⚠️ **Contrôle de cohérence des horaires :**\n\n{w_lines}\n\n*Cliquez sur '⏱️ Enchaîner les horaires' ci-dessous pour aligner automatiquement les enchaînements sans chevauchement.*")
+
+            # BARRE D'OUTILS : TRI ET ENCHAÎNEMENT DES HORAIRES
             if deroule_list:
+                col_tb1, col_tb2, col_tb_sp = st.columns([1.6, 1.8, 2.6])
+                with col_tb1:
+                    if st.button("🔀 Trier par horaire", key=f"btn_sort_deroule_{rencontre_id}", use_container_width=True, help="Trier chronologiquement par heure de début et recalculer la continuité des horaires"):
+                        r["deroule"] = sort_and_recompute_deroule(deroule_list, r_base_start)
+                        save_data(db)
+                        st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                        st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                        st.session_state["flash_success"] = "🔀 Déroulé trié chronologiquement et horaires recalculés en cohérence !"
+                        st.rerun()
+                with col_tb2:
+                    if st.button("⏱️ Enchaîner les horaires", key=f"btn_chain_deroule_{rencontre_id}", use_container_width=True, help="Ajuster les heures de début et fin les unes après les autres sans trou ni chevauchement"):
+                        r["deroule"] = recompute_coherent_deroule_times(deroule_list, r_base_start)
+                        save_data(db)
+                        st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
+                        st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
+                        st.session_state["flash_success"] = "⏱️ Horaires enchaînés en cohérence sans trou ni chevauchement !"
+                        st.rerun()
+
                 st.markdown("""
                     <div style="background:#F1F5F9; border:1px solid #CBD5E1; border-radius:8px 8px 0 0; padding:10px 12px; font-weight:700; font-size:13px; color:#1E293B; margin-bottom:4px;">
                         <div style="display:flex; align-items:center;">
-                            <div style="width:6%;">#</div>
+                            <div style="width:5%;">#</div>
                             <div style="width:15%;">Horaires</div>
-                            <div style="width:25%;">Activité & Détails</div>
-                            <div style="width:14%;">Animateur</div>
-                            <div style="width:16%;">Matériels</div>
-                            <div style="width:24%; text-align:right;">Actions & Organisation</div>
+                            <div style="width:26%;">Activité & Évaluation</div>
+                            <div style="width:13%;">Animateur</div>
+                            <div style="width:14%;">Matériels</div>
+                            <div style="width:27%; text-align:right;">Actions & Organisation</div>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -2557,7 +2809,7 @@ def dialog_modifier_rencontre(rencontre_id):
                 for idx, s in enumerate(deroule_list):
                     c_row = st.container()
                     with c_row:
-                        c_num, c_hor, c_act, c_anim, c_mat, c_btn = st.columns([0.5, 1.4, 2.3, 1.3, 1.4, 2.3])
+                        c_num, c_hor, c_act, c_anim, c_mat, c_btn = st.columns([0.5, 1.4, 2.4, 1.2, 1.3, 2.7])
                         with c_num:
                             st.markdown(f"**#{idx + 1}**")
                         with c_hor:
@@ -2565,6 +2817,9 @@ def dialog_modifier_rencontre(rencontre_id):
                             st.caption(s.get("date", format_date_fr(r.get("date"))))
                         with c_act:
                             st.markdown(f"**{s.get('activite', '')}**")
+                            ev_s = s.get("evaluation", {})
+                            if isinstance(ev_s, dict) and any(ev_s.get(k) for k in ["comment_s_est_passe", "ce_qui_a_marche", "ce_qui_n_a_pas_marche"]):
+                                st.markdown('<span style="background:#FEF3C7; color:#92400E; font-size:11px; padding:2px 7px; border-radius:4px; font-weight:600;">⭐ Évaluée</span>', unsafe_allow_html=True)
                             if s.get("commentaire"):
                                 st.caption(f"💬 {s.get('commentaire')}")
                             for cc in custom_cols:
@@ -2581,19 +2836,29 @@ def dialog_modifier_rencontre(rencontre_id):
                             else:
                                 st.caption("Aucun")
                         with c_btn:
-                            cb1, cb2 = st.columns([1, 1])
+                            cb1, cb2, cb3 = st.columns([1, 1, 1.1])
                             with cb1:
-                                if st.button("✏️ Modifier", key=f"btn_edit_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Modifier cette étape"):
+                                if st.button("✏️ Modif", key=f"btn_edit_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Modifier cette étape"):
                                     st.session_state[cur_edit_step_key] = idx
                                     st.session_state[cur_add_step_key] = False
+                                    st.session_state[cur_eval_step_key] = None
                                     st.rerun()
                             with cb2:
-                                if st.button("➕ Intercaler", key=f"btn_ins_step_line_{rencontre_id}_{idx}", use_container_width=True, help=f"Intercaler une activité après '{s.get('activite', '')}'"):
+                                if st.button("➕ Interc", key=f"btn_ins_step_line_{rencontre_id}_{idx}", use_container_width=True, help=f"Intercaler une activité après '{s.get('activite', '')}'"):
                                     st.session_state[cur_add_step_key] = True
                                     st.session_state[cur_edit_step_key] = None
+                                    st.session_state[cur_eval_step_key] = None
                                     st.session_state[cur_insert_pos_key] = idx + 1
                                     st.session_state[cur_suggested_deb_key] = s.get("heure_fin", "14:00")
                                     st.session_state[cur_suggested_fin_key] = add_minutes_to_time_str(s.get("heure_fin", "14:00"), 30)
+                                    st.rerun()
+                            with cb3:
+                                is_eval = isinstance(s.get("evaluation"), dict) and any(s.get("evaluation", {}).get(k) for k in ["comment_s_est_passe", "ce_qui_a_marche", "ce_qui_n_a_pas_marche"])
+                                btn_ev_lbl = "⭐ Avis" if is_eval else "⭐ Évaluer"
+                                if st.button(btn_ev_lbl, key=f"btn_eval_step_{rencontre_id}_{idx}", use_container_width=True, help="Évaluer cette activité (comment ça s'est passé, ce qui a marché, ce qui n'a pas marché)"):
+                                    st.session_state[cur_eval_step_key] = idx
+                                    st.session_state[cur_edit_step_key] = None
+                                    st.session_state[cur_add_step_key] = False
                                     st.rerun()
 
                             if len(deroule_list) > 1:
@@ -2601,29 +2866,29 @@ def dialog_modifier_rencontre(rencontre_id):
                                 with cm1:
                                     if st.button("⬆️", key=f"btn_up_step_{rencontre_id}_{idx}", use_container_width=True, help="Monter d'un rang", disabled=(idx == 0)):
                                         deroule_list[idx], deroule_list[idx - 1] = deroule_list[idx - 1], deroule_list[idx]
-                                        r["deroule"] = deroule_list
+                                        r["deroule"] = recompute_coherent_deroule_times(deroule_list, r_base_start)
                                         save_data(db)
                                         st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                                         st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                                        st.session_state["flash_success"] = f"⬆️ Activité '{s.get('activite')}' déplacée vers le haut !"
+                                        st.session_state["flash_success"] = f"⬆️ Activité '{s.get('activite')}' déplacée vers le haut et horaires recalculés !"
                                         st.rerun()
                                 with cm2:
                                     if st.button("⬇️", key=f"btn_down_step_{rencontre_id}_{idx}", use_container_width=True, help="Descendre d'un rang", disabled=(idx == len(deroule_list) - 1)):
                                         deroule_list[idx], deroule_list[idx + 1] = deroule_list[idx + 1], deroule_list[idx]
-                                        r["deroule"] = deroule_list
+                                        r["deroule"] = recompute_coherent_deroule_times(deroule_list, r_base_start)
                                         save_data(db)
                                         st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                                         st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                                        st.session_state["flash_success"] = f"⬇️ Activité '{s.get('activite')}' déplacée vers le bas !"
+                                        st.session_state["flash_success"] = f"⬇️ Activité '{s.get('activite')}' déplacée vers le bas et horaires recalculés !"
                                         st.rerun()
                                 with cm3:
                                     if st.button("🗑️", key=f"btn_del_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Supprimer cette étape"):
                                         deroule_list.pop(idx)
-                                        r["deroule"] = deroule_list
+                                        r["deroule"] = recompute_coherent_deroule_times(deroule_list, r_base_start)
                                         save_data(db)
                                         st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                                         st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                                        st.session_state["flash_success"] = "🗑️ Étape supprimée."
+                                        st.session_state["flash_success"] = "🗑️ Étape supprimée et horaires réalignés."
                                         st.rerun()
                             else:
                                 if st.button("🗑️ Supprimer", key=f"btn_del_step_line_{rencontre_id}_{idx}", use_container_width=True, help="Supprimer cette étape"):
@@ -2650,6 +2915,7 @@ def dialog_modifier_rencontre(rencontre_id):
                         st.session_state[cur_suggested_deb_key] = deroule_list[-1].get("heure_fin", "14:00")
                         st.session_state[cur_suggested_fin_key] = add_minutes_to_time_str(deroule_list[-1].get("heure_fin", "14:00"), 30)
                         st.session_state[cur_edit_step_key] = None
+                        st.session_state[cur_eval_step_key] = None
                         st.rerun()
                 with c_add_btn2:
                     if st.button("⭐ Intercaler en 1ère position", type="secondary", use_container_width=True, key=f"btn_trigger_insert_top_{rencontre_id}", help="Intercaler une activité au tout début de la rencontre"):
@@ -2658,34 +2924,48 @@ def dialog_modifier_rencontre(rencontre_id):
                         st.session_state[cur_suggested_deb_key] = deroule_list[0].get("heure_debut", "14:00")
                         st.session_state[cur_suggested_fin_key] = add_minutes_to_time_str(deroule_list[0].get("heure_debut", "14:00"), 30)
                         st.session_state[cur_edit_step_key] = None
+                        st.session_state[cur_eval_step_key] = None
                         st.rerun()
             else:
                 if st.button("➕ Ajouter la première étape au déroulé", type="primary", use_container_width=True, key=f"btn_trigger_add_step_{rencontre_id}"):
                     st.session_state[cur_add_step_key] = True
                     st.session_state[cur_insert_pos_key] = 0
-                    st.session_state[cur_suggested_deb_key] = "14:00"
-                    st.session_state[cur_suggested_fin_key] = "14:30"
+                    st.session_state[cur_suggested_deb_key] = r_base_start or "14:00"
+                    st.session_state[cur_suggested_fin_key] = add_minutes_to_time_str(r_base_start or "14:00", 30)
                     st.session_state[cur_edit_step_key] = None
+                    st.session_state[cur_eval_step_key] = None
                     st.rerun()
 
-            # ZONE NOTES / COMPTE-RENDU DE LA RENCONTRE (Retour d'expérience après la séance)
+            # ZONE NOTES / COMPTE-RENDU DE LA RENCONTRE (Bilan structuré pour chacun des 6 Grandir)
             st.write("")
             st.markdown("---")
-            st.markdown("##### 📝 Notes & Compte-Rendu après la rencontre")
-            st.caption("Espace réservé aux animateurs pour faire le bilan de la séance et transmettre les informations utiles aux prochains animateurs (ce qui a marché, points de vigilance, ressentis).")
+            st.markdown("##### 📝 Notes & Compte-Rendu après la rencontre (Bilan des 6 Grandir)")
+            st.caption("Pour chacun des 6 axes de développement des Farfadets ('Grandir'), renseignez ce qui s'est bien passé durant la séance ou les points à améliorer.")
+            
+            cur_cr_g = get_meeting_cr_grandir(r)
             with st.form(f"form_compte_rendu_{rencontre_id}"):
-                cr_input = st.text_area(
-                    "Compte-rendu, retours d'animation et points d'attention :",
-                    value=r.get("compte_rendu", ""),
-                    height=130,
-                    placeholder="Ex : Superbe séance ! Le jeu de piste a pris 15 minutes de plus que prévu. Les enfants ont adoré le temps imaginaire. Bien penser à prévoir plus de cordes pour la prochaine fois..."
-                )
-                if st.form_submit_button("💾 Enregistrer les notes / compte-rendu", type="primary", use_container_width=True):
-                    r["compte_rendu"] = cr_input
+                new_cr_g = {}
+                col_g1, col_g2 = st.columns(2)
+                for gi, g_name in enumerate(GRANDIR_OPTIONS):
+                    target_col = col_g1 if gi % 2 == 0 else col_g2
+                    with target_col:
+                        st.markdown(f"**{g_name}**")
+                        new_cr_g[g_name] = st.text_area(
+                            label=f"Bilan pour {g_name}",
+                            value=cur_cr_g.get(g_name, ""),
+                            height=85,
+                            key=f"cr_g_{rencontre_id}_{gi}",
+                            label_visibility="collapsed",
+                            placeholder=f"Ce qui a bien marché / points à améliorer pour {g_name}..."
+                        )
+
+                if st.form_submit_button("💾 Enregistrer le bilan des 6 Grandir", type="primary", use_container_width=True):
+                    r["compte_rendu_grandir"] = new_cr_g
+                    r["compte_rendu"] = format_cr_grandir_text(new_cr_g)
                     save_data(db)
                     st.session_state[f"_force_tab_{rencontre_id}"] = "⏱️ Déroulé chronologique"
                     st.session_state[cur_tab_key] = "⏱️ Déroulé chronologique"
-                    st.session_state["flash_success"] = "✅ Notes & Compte-rendu de la rencontre enregistrés !"
+                    st.session_state["flash_success"] = "✅ Compte-rendu des 6 Grandir enregistré avec succès !"
                     st.rerun()
 
     # 3. LISTE DU MATÉRIEL (TABLEAU INTERACTIF AVEC ÉCRAN MODIFIER ET ÉCRAN AJOUTER)
@@ -2933,6 +3213,60 @@ def dialog_supprimer_rencontre(rencontre_id):
     with c2:
         if st.button("Annuler", use_container_width=True):
             st.rerun()
+
+@st.dialog("⭐ Évaluation de l'activité", width="medium")
+def dialog_evaluer_activite(rencontre_id, step_idx):
+    r = next((x for x in current_ronde.get("rencontres", []) if x["id"] == rencontre_id), None)
+    if not r:
+        st.error("Rencontre introuvable.")
+        return
+    deroule = r.get("deroule", [])
+    if not (0 <= step_idx < len(deroule)):
+        st.error("Étape introuvable dans le déroulé.")
+        return
+    step = deroule[step_idx]
+    cur_eval = step.get("evaluation")
+    if not isinstance(cur_eval, dict):
+        cur_eval = {}
+
+    st.markdown(f"#### ⭐ Évaluer : **{step.get('activite', '')}**")
+    st.caption(f"📅 **{format_date_fr(r.get('date'))}** • Horaires : **{step.get('heure_debut', '')} - {step.get('heure_fin', '')}** • Animateur : **{step.get('animateur', '-')}**")
+
+    st.info("💡 Vos retours permettent d'alimenter la mémoire pédagogique de la ronde et d'aider les prochains animateurs.")
+    with st.form(f"form_dialog_eval_{rencontre_id}_{step_idx}"):
+        ev_c = st.text_area(
+            "1️⃣ Comment ça s'est passé ? *",
+            value=cur_eval.get("comment_s_est_passe", ""),
+            height=100,
+            placeholder="Ressenti général, dynamisme du groupe, participation des enfants, temps d'attention..."
+        )
+        ev_m = st.text_area(
+            "2️⃣ Ce qui a marché :",
+            value=cur_eval.get("ce_qui_a_marche", ""),
+            height=90,
+            placeholder="Points forts, succès de la règle du jeu, immersion dans l'imaginaire, bonne coopération..."
+        )
+        ev_p = st.text_area(
+            "3️⃣ Ce qui n'a pas marché / À améliorer :",
+            value=cur_eval.get("ce_qui_n_a_pas_marche", ""),
+            height=90,
+            placeholder="Points de blocage, durée trop longue, matériel manquant, explications à simplifier..."
+        )
+
+        c_eb1, c_eb2 = st.columns([3, 1])
+        with c_eb1:
+            if st.form_submit_button("💾 Enregistrer l'évaluation", type="primary", use_container_width=True):
+                step["evaluation"] = {
+                    "comment_s_est_passe": ev_c.strip(),
+                    "ce_qui_a_marche": ev_m.strip(),
+                    "ce_qui_n_a_pas_marche": ev_p.strip()
+                }
+                save_data(db)
+                st.session_state["flash_success"] = f"⭐ Évaluation de l'activité '{step.get('activite')}' enregistrée !"
+                st.rerun()
+        with c_eb2:
+            if st.form_submit_button("Annuler", use_container_width=True):
+                st.rerun()
 
 # ----------------- MODALES MEMBRES -----------------
 @st.dialog("✏️ Modifier le membre")
@@ -3651,24 +3985,43 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                         if r.get("objectifs"):
                             st.markdown(f"**Objectifs :** {r['objectifs']}")
 
-                        st.markdown("##### ⏱️ Tableau du Déroulé :")
+                        st.markdown("##### ⏱️ Déroulé détaillé de la séance :")
                         if r.get("deroule"):
-                            df_steps = []
-                            custom_c_list = r.get("colonnes_deroule", [])
-                            for idx, s in enumerate(r["deroule"]):
-                                row_data = {
-                                    "Date": s.get("date", format_date_fr(r.get("date"))),
-                                    "Début": s.get("heure_debut", ""),
-                                    "Fin": s.get("heure_fin", ""),
-                                    "Activité": s.get("activite", ""),
-                                    "Animateur": s.get("animateur", ""),
-                                    "Matériels requis": ", ".join(s.get("materiels", [])),
-                                    "Commentaire": s.get("commentaire", "")
-                                }
-                                for cc in custom_c_list:
-                                    row_data[cc] = s.get(cc, "")
-                                df_steps.append(row_data)
-                            st.dataframe(pd.DataFrame(df_steps), use_container_width=True, hide_index=True)
+                            for s_idx, s in enumerate(r["deroule"]):
+                                with st.container():
+                                    ev_data = s.get("evaluation") if isinstance(s.get("evaluation"), dict) else {}
+                                    has_eval = any(ev_data.get(k) for k in ["comment_s_est_passe", "ce_qui_a_marche", "ce_qui_n_a_pas_marche"])
+                                    
+                                    col_step_info, col_step_btn = st.columns([4, 1.2])
+                                    with col_step_info:
+                                        eval_tag = ' &nbsp;<span style="background:#FEF3C7; color:#92400E; font-size:11px; padding:2px 6px; border-radius:4px; font-weight:600;">⭐ Évaluée</span>' if has_eval else ''
+                                        st.markdown(f"**#{s_idx + 1}** &nbsp; ⏰ ` {s.get('heure_debut', '')} - {s.get('heure_fin', '')} ` &nbsp; **{s.get('activite', '')}**{eval_tag}", unsafe_allow_html=True)
+                                        
+                                        sub_details = []
+                                        if s.get("animateur"):
+                                            sub_details.append(f"🏕️ Animateur : {s.get('animateur')}")
+                                        if s.get("materiels"):
+                                            sub_details.append(f"🎒 Matériel : {', '.join(s.get('materiels'))}")
+                                        if s.get("commentaire"):
+                                            sub_details.append(f"💬 {s.get('commentaire')}")
+                                        if sub_details:
+                                            st.caption(" • ".join(sub_details))
+                                    
+                                    with col_step_btn:
+                                        if can_configure_rencontre(r):
+                                            btn_ev_text = "⭐ Voir / Évaluer" if has_eval else "⭐ Évaluer"
+                                            if st.button(btn_ev_text, key=f"btn_eval_plan_view_{r['id']}_{s_idx}", use_container_width=True):
+                                                dialog_evaluer_activite(r["id"], s_idx)
+                                    
+                                    if has_eval:
+                                        with st.expander(f"⭐ Consulter l'évaluation de '{s.get('activite')}'", expanded=False):
+                                            if ev_data.get("comment_s_est_passe"):
+                                                st.markdown(f"**1️⃣ Comment ça s'est passé :**\n{ev_data.get('comment_s_est_passe')}")
+                                            if ev_data.get("ce_qui_a_marche"):
+                                                st.markdown(f"**2️⃣ Ce qui a marché :**\n{ev_data.get('ce_qui_a_marche')}")
+                                            if ev_data.get("ce_qui_n_a_pas_marche"):
+                                                st.markdown(f"**3️⃣ Ce qui n'a pas marché / À améliorer :**\n{ev_data.get('ce_qui_n_a_pas_marche')}")
+                                    st.markdown('<hr style="margin:4px 0 8px 0; border:0; border-top:1px dashed #E2E8F0;">', unsafe_allow_html=True)
                         else:
                             st.caption("Déroulé non renseigné.")
 
@@ -3684,21 +4037,56 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                             ])
                             st.dataframe(df_mats, use_container_width=True, hide_index=True)
 
-                        # Notes et Compte-rendu après la rencontre
-                        st.markdown("##### 📝 Notes & Compte-Rendu après la séance :")
-                        if r.get("compte_rendu"):
-                            st.info(f"**Bilan d'animation :**\n\n{r['compte_rendu']}")
+                        # Notes et Compte-rendu après la rencontre (Bilan des 6 Grandir)
+                        st.markdown("##### 📝 Compte-Rendu de la rencontre (Bilan des 6 Grandir) :")
+                        r_cr_g = get_meeting_cr_grandir(r)
+                        has_any_g = any(str(v).strip() for v in r_cr_g.values())
+                        
+                        if has_any_g:
+                            g_cards_col1, g_cards_col2 = st.columns(2)
+                            for gi, g_name in enumerate(GRANDIR_OPTIONS):
+                                target_gc = g_cards_col1 if gi % 2 == 0 else g_cards_col2
+                                val_g = (r_cr_g.get(g_name) or "").strip()
+                                with target_gc:
+                                    if val_g:
+                                        st.markdown(f"""
+                                            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:10px 14px; margin-bottom:8px;">
+                                                <div style="font-weight:700; font-size:13px; color:#1E293B;">{g_name}</div>
+                                                <div style="font-size:12.5px; color:#334155; margin-top:4px;">{val_g}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                    else:
+                                        st.markdown(f"""
+                                            <div style="background:#FFFFFF; border:1px dashed #CBD5E1; border-radius:8px; padding:8px 12px; margin-bottom:8px;">
+                                                <div style="font-weight:600; font-size:12px; color:#94A3B8;">{g_name} : <i>Non renseigné</i></div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
                         else:
                             st.caption("Aucun compte-rendu rédigé pour le moment.")
 
                         if can_configure_rencontre(r):
-                            with st.expander("✏️ Rédiger ou modifier les notes / compte-rendu de cette séance"):
+                            with st.expander("✏️ Rédiger ou modifier le bilan des 6 Grandir de cette séance"):
                                 with st.form(f"form_quick_cr_{r['id']}"):
-                                    quick_cr = st.text_area("Notes & Bilan de la séance :", value=r.get("compte_rendu", ""), height=100)
-                                    if st.form_submit_button("💾 Enregistrer le compte-rendu", type="primary"):
-                                        r["compte_rendu"] = quick_cr
+                                    st.caption("Notez pour chaque axe de développement ce qui a été bien fait ou à améliorer.")
+                                    quick_cr_dict = {}
+                                    q_c1, q_c2 = st.columns(2)
+                                    for g_i, g_n in enumerate(GRANDIR_OPTIONS):
+                                        target_qc = q_c1 if g_i % 2 == 0 else q_c2
+                                        with target_qc:
+                                            st.markdown(f"**{g_n}**")
+                                            quick_cr_dict[g_n] = st.text_area(
+                                                label=f"Bilan {g_n}",
+                                                value=r_cr_g.get(g_n, ""),
+                                                height=80,
+                                                key=f"q_cr_{r['id']}_{g_i}",
+                                                label_visibility="collapsed",
+                                                placeholder=f"Ce qui a bien marché / à améliorer pour {g_n}..."
+                                            )
+                                    if st.form_submit_button("💾 Enregistrer le bilan des 6 Grandir", type="primary", use_container_width=True):
+                                        r["compte_rendu_grandir"] = quick_cr_dict
+                                        r["compte_rendu"] = format_cr_grandir_text(quick_cr_dict)
                                         save_data(db)
-                                        st.session_state["flash_success"] = f"✅ Compte-rendu de la séance du {format_date_fr(r['date'])} enregistré !"
+                                        st.session_state["flash_success"] = f"✅ Bilan des 6 Grandir du {format_date_fr(r['date'])} enregistré !"
                                         st.rerun()
                         st.write("")
         else:
@@ -3717,7 +4105,11 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                     type_n = st.selectbox("Type d'événement", ["Rencontre ronde", "Sortie nature", "Réunion parents/animateurs", "Week-end de ronde"])
                     date_n = st.date_input("Date (JJ/MM/AAAA) *", value=date.today(), format="DD/MM/YYYY")
                 with f_col2:
-                    horaire_n = st.text_input("Créneau horaire", value="14:00 - 17:00")
+                    c_th_n1, c_th_n2 = st.columns(2)
+                    with c_th_n1:
+                        h_deb_n = st.time_input("Heure début *", value=time(14, 0), step=300, key="new_r_time_deb")
+                    with c_th_n2:
+                        h_fin_n = st.time_input("Heure fin *", value=time(17, 0), step=300, key="new_r_time_fin")
                     lieu_n = st.text_input("Lieu", value=current_ronde.get("lieu_habituel", "Local Scout"))
 
                 st.markdown("---")
@@ -3746,16 +4138,20 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                 if submitted_n:
                     if not titre_n:
                         st.error("Le titre de la rencontre est obligatoire.")
+                    elif h_fin_n <= h_deb_n:
+                        st.error("L'heure de fin de la rencontre doit être strictement postérieure à l'heure de début.")
                     else:
                         animateur_n = combine_animators(sel_anim_n, autre_anim_n)
                         new_r_id = max([x["id"] for x in current_ronde.get("rencontres", [])], default=0) + 1
                         date_iso = parse_date_to_iso(date_n)
+                        h_deb_str = h_deb_n.strftime("%H:%M")
+                        h_fin_str = h_fin_n.strftime("%H:%M")
                         new_item = {
                             "id": new_r_id,
                             "titre": titre_n,
                             "type": type_n,
                             "date": date_iso,
-                            "horaire": horaire_n,
+                            "horaire": f"{h_deb_str} - {h_fin_str}",
                             "lieu": lieu_n,
                             "lieu_adresse": lieu_n,
                             "lat": 48.9417,
@@ -3771,10 +4167,39 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                                 {"id": 2, "nom": "Goûter et compotes", "qui_amene": "Parents", "photo": ""}
                             ],
                             "deroule": [
-                                {"date": format_date_fr(date_iso), "heure_debut": "14:00", "heure_fin": "14:30", "activite": "Accueil et cri de ronde", "animateur": animateur_n, "materiels": ["Foulards de ronde"], "commentaire": "Rassemblement en cercle"},
-                                {"date": format_date_fr(date_iso), "heure_debut": "14:30", "heure_fin": "16:15", "activite": "Activité principale", "animateur": animateur_n, "materiels": [], "commentaire": "Jeu par sizaine"},
-                                {"date": format_date_fr(date_iso), "heure_debut": "16:15", "heure_fin": "17:00", "activite": "Goûter & Bilan", "animateur": "Parents", "materiels": ["Goûter et compotes"], "commentaire": "Nettoyage et fin"}
-                            ]
+                                {
+                                    "date": format_date_fr(date_iso), 
+                                    "heure_debut": h_deb_str, 
+                                    "heure_fin": add_minutes_to_time_str(h_deb_str, 30), 
+                                    "activite": "Accueil et cri de ronde", 
+                                    "animateur": animateur_n, 
+                                    "materiels": ["Foulards de ronde"], 
+                                    "commentaire": "Rassemblement en cercle",
+                                    "evaluation": {"comment_s_est_passe": "", "ce_qui_a_marche": "", "ce_qui_n_a_pas_marche": ""}
+                                },
+                                {
+                                    "date": format_date_fr(date_iso), 
+                                    "heure_debut": add_minutes_to_time_str(h_deb_str, 30), 
+                                    "heure_fin": add_minutes_to_time_str(h_deb_str, 135), 
+                                    "activite": "Activité principale", 
+                                    "animateur": animateur_n, 
+                                    "materiels": [], 
+                                    "commentaire": "Jeu par sizaine",
+                                    "evaluation": {"comment_s_est_passe": "", "ce_qui_a_marche": "", "ce_qui_n_a_pas_marche": ""}
+                                },
+                                {
+                                    "date": format_date_fr(date_iso), 
+                                    "heure_debut": add_minutes_to_time_str(h_deb_str, 135), 
+                                    "heure_fin": h_fin_str, 
+                                    "activite": "Goûter & Bilan", 
+                                    "animateur": "Parents", 
+                                    "materiels": ["Goûter et compotes"], 
+                                    "commentaire": "Nettoyage et fin",
+                                    "evaluation": {"comment_s_est_passe": "", "ce_qui_a_marche": "", "ce_qui_n_a_pas_marche": ""}
+                                }
+                            ],
+                            "compte_rendu_grandir": {g: "" for g in GRANDIR_OPTIONS},
+                            "compte_rendu": ""
                         }
                         current_ronde.setdefault("rencontres", []).append(new_item)
                         save_data(db)
