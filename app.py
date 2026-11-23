@@ -239,7 +239,105 @@ def safe_int(val, default=0):
     except Exception:
         return default
 
+# Types de rencontres officielles Farfadets
+RENCONTRE_TYPES = [
+    "Rencontre ronde",
+    "Sortie nature",
+    "Week-end de ronde",
+    "Camp d'été",
+    "Réunion parents/animateurs"
+]
+
+def format_rencontre_dates(r):
+    """
+    Formate la date d'une rencontre :
+    - Si 1 seul jour : '08/11/2026'
+    - Si plusieurs jours (week-end, camp) : 'Du 24/04/2027 au 25/04/2027'
+    """
+    if not r:
+        return ""
+    d_deb_str = format_date_fr(r.get("date"))
+    d_fin_str = format_date_fr(r.get("date_fin"))
+    if d_fin_str and d_fin_str != d_deb_str:
+        return f"Du {d_deb_str} au {d_fin_str}"
+    return d_deb_str
+
+def get_dates_for_rencontre(r):
+    """
+    Retourne la liste des dates ISO (AAAA-MM-JJ) couvertes par la rencontre (1 ou plusieurs jours).
+    """
+    d_start = parse_date_obj(r.get("date"), default_today=False)
+    if not d_start:
+        return []
+    d_fin = parse_date_obj(r.get("date_fin"), default_today=False)
+    if not d_fin or d_fin < d_start:
+        h = (r.get("horaire") or "").lower()
+        if "samedi" in h and "dimanche" in h:
+            from datetime import timedelta
+            d_fin = d_start + timedelta(days=1)
+        elif "du 2 au 5 juillet" in h:
+            from datetime import timedelta
+            d_fin = d_start + timedelta(days=3)
+        else:
+            d_fin = d_start
+    
+    dates_list = []
+    if d_fin and d_fin > d_start:
+        from datetime import timedelta
+        cur = d_start
+        while cur <= d_fin:
+            dates_list.append(cur.strftime("%Y-%m-%d"))
+            cur += timedelta(days=1)
+    else:
+        dates_list.append(d_start.strftime("%Y-%m-%d"))
+    return dates_list
+
+def sort_rencontres(rencontres_list):
+    """
+    Trie chronologiquement la liste des rencontres par date de début (puis date de fin, puis heure, puis id).
+    """
+    if not rencontres_list:
+        return []
+    def _sort_key(r):
+        d_deb = parse_date_to_iso(r.get("date", "")) or "9999-99-99"
+        d_fin = parse_date_to_iso(r.get("date_fin", "")) or d_deb
+        h_deb = str(r.get("horaire", "")).split("-")[0].strip()
+        return (d_deb, d_fin, h_deb, safe_int(r.get("id", 0)))
+    return sorted(rencontres_list, key=_sort_key)
+
 def normalize_rencontre_data(r):
+    # Validation et normalisation du type de rencontre
+    t_low = str(r.get("type", "")).lower()
+    titre_low = str(r.get("titre", "")).lower()
+    if "camp" in t_low or "camp" in titre_low:
+        r["type"] = "Camp d'été"
+    elif "week" in t_low or "week" in titre_low:
+        r["type"] = "Week-end de ronde"
+    elif "sortie" in t_low or "nature" in t_low:
+        r["type"] = "Sortie nature"
+    elif "réunion" in t_low or "reunion" in t_low:
+        r["type"] = "Réunion parents/animateurs"
+    elif r.get("type") not in RENCONTRE_TYPES:
+        r["type"] = "Rencontre ronde"
+
+    # Dates de début et de fin pour événements multi-jours
+    r["date"] = parse_date_to_iso(r.get("date", ""))
+    d_fin_iso = parse_date_to_iso(r.get("date_fin", ""))
+    if not d_fin_iso or d_fin_iso <= r["date"]:
+        h = (r.get("horaire") or "").lower()
+        d_obj = parse_date_obj(r["date"], default_today=False)
+        if d_obj:
+            from datetime import timedelta
+            if "du 2 au 5 juillet" in h or "5 juillet" in h or ("camp" in titre_low and "4 jours" in h):
+                d_fin_iso = parse_date_to_iso(d_obj + timedelta(days=3))
+            elif ("samedi" in h and "dimanche" in h) or (r.get("id") == 7 and "camp territorial" in titre_low):
+                d_fin_iso = parse_date_to_iso(d_obj + timedelta(days=1))
+            else:
+                d_fin_iso = d_fin_iso if d_fin_iso else r["date"]
+        else:
+            d_fin_iso = d_fin_iso if d_fin_iso else r["date"]
+    r["date_fin"] = d_fin_iso
+
     r.setdefault("description", "")
     r.setdefault("imaginaire_rencontre", "")
     r.setdefault("objectifs", "")
@@ -484,13 +582,15 @@ def extract_tables_dict(database_obj):
                 "enfants_ids": json.dumps(m.get("enfants_ids", []), ensure_ascii=False)
             })
 
-    # 3. Rencontres
+    # 3. Rencontres (triées chronologiquement avec date et date_fin)
     rows_rc = []
     for r in database_obj.get("rondes", []):
-        for rc in r.get("rencontres", []):
+        for rc in sort_rencontres(r.get("rencontres", [])):
             rows_rc.append({
                 "id": rc.get("id"), "ronde_id": r.get("id"), "ronde_nom": r.get("nom", ""), "titre": rc.get("titre", ""),
-                "type": rc.get("type", "Rencontre ronde"), "date": rc.get("date", ""), "horaire": rc.get("horaire", "14:00 - 17:00"),
+                "type": rc.get("type", "Rencontre ronde"), "date": rc.get("date", ""),
+                "date_fin": rc.get("date_fin", rc.get("date", "")),
+                "horaire": rc.get("horaire", "14:00 - 17:00"),
                 "lieu": rc.get("lieu", ""), "lieu_adresse": rc.get("lieu_adresse", rc.get("lieu", "")),
                 "lat": rc.get("lat", 48.9417), "lon": rc.get("lon", 2.1645),
                 "animateur": rc.get("animateur", ""), "statut": rc.get("statut", "À venir"),
@@ -834,6 +934,7 @@ def parse_and_apply_imported_tables(dfs_dict, db_target):
                     "titre": str(row_rc.get("titre", "")),
                     "type": str(row_rc.get("type", "Rencontre ronde")),
                     "date": parse_date_to_iso(row_rc.get("date", "")),
+                    "date_fin": parse_date_to_iso(row_rc.get("date_fin", "")) if (pd.notna(row_rc.get("date_fin")) and str(row_rc.get("date_fin")).strip()) else "",
                     "horaire": str(row_rc.get("horaire", "14:00 - 17:00")),
                     "lieu": str(row_rc.get("lieu", "")),
                     "lieu_adresse": lieu_adr,
@@ -901,7 +1002,7 @@ def parse_and_apply_imported_tables(dfs_dict, db_target):
             "peuplade": str(row_r.get("peuplade", "Branche scoute des 6 - 8 ans et leurs parents")),
             "lieu_habituel": str(row_r.get("lieu_habituel", "")),
             "membres": r_membres,
-            "rencontres": [normalize_rencontre_data(rc) for rc in r_rencontres],
+            "rencontres": sort_rencontres([normalize_rencontre_data(rc) for rc in r_rencontres]),
             "imaginaire": im_text,
             "imaginaire_titre": im_titre,
             "imaginaire_photos": im_photos,
@@ -1032,7 +1133,7 @@ def load_data(force_reload=False):
         for mb in ro.get("membres", []):
             mb.setdefault("parents_ids", [])
             mb.setdefault("enfants_ids", [])
-        ro["rencontres"] = [normalize_rencontre_data(r) for r in ro.get("rencontres", [])]
+        ro["rencontres"] = sort_rencontres([normalize_rencontre_data(r) for r in ro.get("rencontres", [])])
 
     # Mise à jour du miroir local
     try:
@@ -1052,6 +1153,8 @@ def save_data(data):
     3. Pousse la totalité des tables (y compris utilisateurs et mots de passe) vers Google Sheets en direct.
     """
     st.session_state["db"] = data
+    for ro in data.get("rondes", []):
+        ro["rencontres"] = sort_rencontres(ro.get("rencontres", []))
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -1097,19 +1200,20 @@ def get_current_ronde():
 
 def get_initial_calendar_period(ronde_obj):
     today = date.today()
-    rencontres = (ronde_obj.get("rencontres", []) if ronde_obj else [])
+    rencontres = sort_rencontres(ronde_obj.get("rencontres", []) if ronde_obj else [])
     
     # 1. Vérifier si des rencontres sont programmées ce mois-ci
     cur_prefix = f"{today.year}-{today.month:02d}"
-    if any(parse_date_to_iso(r.get("date", "")).startswith(cur_prefix) for r in rencontres):
+    if any(any(d.startswith(cur_prefix) for d in get_dates_for_rencontre(r)) for r in rencontres):
         return today.year, today.month
         
     # 2. Sinon, trouver la prochaine rencontre à venir
     upcoming = []
     for r in rencontres:
         d = parse_date_obj(r.get("date"), default_today=False)
-        if d and d >= today:
-            upcoming.append(d)
+        d_fin = parse_date_obj(r.get("date_fin"), default_today=False) or d
+        if d_fin and d_fin >= today:
+            upcoming.append(d or d_fin)
     if upcoming:
         upcoming.sort()
         return upcoming[0].year, upcoming[0].month
@@ -2307,11 +2411,16 @@ def dialog_modifier_rencontre(rencontre_id):
             c1, c2 = st.columns(2)
             with c1:
                 titre = st.text_input("Titre de la rencontre", value=r.get("titre", ""))
-                type_opts = ["Rencontre ronde", "Sortie nature", "Réunion parents/animateurs", "Week-end de ronde"]
+                type_opts = RENCONTRE_TYPES
                 type_idx = type_opts.index(r.get("type", "Rencontre ronde")) if r.get("type") in type_opts else 0
                 type_r = st.selectbox("Type", type_opts, index=type_idx)
-                d_val = parse_date_obj(r.get("date", date.today()))
-                d_date = st.date_input("Date de la rencontre (JJ/MM/AAAA)", value=d_val, format="DD/MM/YYYY")
+                d_deb_val = parse_date_obj(r.get("date", date.today()))
+                d_fin_val = parse_date_obj(r.get("date_fin", r.get("date", date.today())))
+                c_dates1, c_dates2 = st.columns(2)
+                with c_dates1:
+                    d_date_deb = st.date_input("Date début *", value=d_deb_val, format="DD/MM/YYYY")
+                with c_dates2:
+                    d_date_fin = st.date_input("Date fin *", value=d_fin_val, format="DD/MM/YYYY")
             with c2:
                 def_deb_r, def_fin_r = parse_horaire_range(r.get("horaire", "14:00 - 17:00"))
                 c_th1, c_th2 = st.columns(2)
@@ -2352,12 +2461,15 @@ def dialog_modifier_rencontre(rencontre_id):
                 lon = st.number_input("Longitude GPS", value=safe_float(r.get("lon"), 2.1645), format="%.5f")
 
             if st.form_submit_button("Enregistrer les informations générales", type="primary", use_container_width=True):
-                if h_fin_r <= h_deb_r:
+                if d_date_fin < d_date_deb:
+                    st.error("La date de fin ne peut pas être antérieure à la date de début.")
+                elif h_fin_r <= h_deb_r:
                     st.error("L'heure de fin de la rencontre doit être strictement postérieure à l'heure de début.")
                 else:
                     r["titre"] = titre
                     r["type"] = type_r
-                    r["date"] = parse_date_to_iso(d_date)
+                    r["date"] = parse_date_to_iso(d_date_deb)
+                    r["date_fin"] = parse_date_to_iso(d_date_fin)
                     r["horaire"] = f"{h_deb_r.strftime('%H:%M')} - {h_fin_r.strftime('%H:%M')}"
                     r["animateur"] = combine_animators(sel_anim, autre_anim)
                     r["statut"] = statut
@@ -2365,10 +2477,11 @@ def dialog_modifier_rencontre(rencontre_id):
                     r["lieu_adresse"] = lieu_adr
                     r["lat"] = lat
                     r["lon"] = lon
+                    current_ronde["rencontres"] = sort_rencontres(current_ronde.get("rencontres", []))
                     save_data(db)
                     st.session_state[f"_force_tab_{rencontre_id}"] = "📋 Informations Générales"
                     st.session_state[cur_tab_key] = "📋 Informations Générales"
-                    st.session_state["flash_success"] = f"✅ Rencontre mise à jour au {format_date_fr(r['date'])} !"
+                    st.session_state["flash_success"] = f"✅ Rencontre mise à jour : {format_rencontre_dates(r)} !"
                     st.rerun()
 
     # 2. DÉROULÉ CHRONOLOGIQUE (TABLEAU INTERACTIF AVEC ÉCRAN MODIFIER, ÉCRAN AJOUTER ET ÉCRAN ÉVALUER)
@@ -2392,6 +2505,10 @@ def dialog_modifier_rencontre(rencontre_id):
 
         # Base horaire de référence pour le recalcul des enchaînements
         r_base_start = r.get("horaire", "14:00 - 17:00").split("-")[0].strip()
+        r_d_deb = parse_date_obj(r.get("date", date.today()))
+        r_d_fin = parse_date_obj(r.get("date_fin", r.get("date", date.today())))
+        if r_d_fin < r_d_deb:
+            r_d_fin = r_d_deb
 
         # ÉCRAN 1 : MODIFICATION D'UNE LIGNE PRÉCISE DU TABLEAU
         if editing_idx is not None and 0 <= editing_idx < len(deroule_list):
@@ -2409,7 +2526,12 @@ def dialog_modifier_rencontre(rencontre_id):
             with st.form(f"form_modify_step_{rencontre_id}_{editing_idx}"):
                 col_ms1, col_ms2 = st.columns(2)
                 with col_ms1:
-                    m_s_date = st.date_input("Date de l'étape", value=parse_date_obj(cur_s.get("date", r.get("date", date.today()))), format="DD/MM/YYYY")
+                    cur_s_d = parse_date_obj(cur_s.get("date", r.get("date", date.today())))
+                    if cur_s_d < r_d_deb:
+                        cur_s_d = r_d_deb
+                    elif cur_s_d > r_d_fin:
+                        cur_s_d = r_d_fin
+                    m_s_date = st.date_input("Date de l'étape", value=cur_s_d, min_value=r_d_deb, max_value=r_d_fin, format="DD/MM/YYYY")
                     m_s_act = st.text_input("Activité *", value=cur_s.get("activite", ""))
                     c_time1, c_time2 = st.columns(2)
                     with c_time1:
@@ -2585,7 +2707,7 @@ def dialog_modifier_rencontre(rencontre_id):
 
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
-                    step_date = st.date_input("Date de l'étape", value=parse_date_obj(r.get("date", date.today())), format="DD/MM/YYYY")
+                    step_date = st.date_input("Date de l'étape", value=r_d_deb, min_value=r_d_deb, max_value=r_d_fin, format="DD/MM/YYYY")
                     step_act = st.text_input("Nom de l'activité *", placeholder="Ex : Grand jeu de piste")
                     c_sth1, c_sth2 = st.columns(2)
                     with c_sth1:
@@ -3202,7 +3324,7 @@ def dialog_supprimer_rencontre(rencontre_id):
     if not r:
         st.error("Rencontre introuvable.")
         return
-    st.warning(f"Êtes-vous sûr de vouloir supprimer définitivement la rencontre : **{r.get('titre')}** du {format_date_fr(r.get('date'))} ?")
+    st.warning(f"Êtes-vous sûr de vouloir supprimer définitivement la rencontre : **{r.get('titre')}** ({format_rencontre_dates(r)}) ?")
     c1, c2 = st.columns(2)
     with c1:
         if st.button("Confirmer la suppression", type="primary", use_container_width=True):
@@ -3464,35 +3586,17 @@ def get_month_name(m):
             "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"]
     return mois[m - 1]
 
-def get_dates_for_rencontre(r):
-    d_start = parse_date_obj(r.get("date"), default_today=False)
-    if not d_start:
-        return []
-    d_fin = parse_date_obj(r.get("date_fin"), default_today=False)
-    if not d_fin:
-        h = (r.get("horaire") or "").lower()
-        if "samedi" in h and "dimanche" in h:
-            from datetime import timedelta
-            d_fin = d_start + timedelta(days=1)
-        elif "du 2 au 5 juillet" in h:
-            from datetime import timedelta
-            d_fin = d_start + timedelta(days=3)
-    
-    dates_list = []
-    if d_fin and d_fin > d_start:
-        from datetime import timedelta
-        cur = d_start
-        while cur <= d_fin:
-            dates_list.append(cur.strftime("%Y-%m-%d"))
-            cur += timedelta(days=1)
-    else:
-        dates_list.append(d_start.strftime("%Y-%m-%d"))
-    return dates_list
-
 def get_rencontre_icon(titre, type_ev=""):
     t_lower = (titre or "").lower()
-    if "camp" in t_lower or "tente" in t_lower:
+    tp_lower = (type_ev or "").lower()
+    if "camp" in t_lower or "tente" in t_lower or "camp" in tp_lower:
         return "⛺"
+    if "week-end" in tp_lower or "week-end" in t_lower or "weekend" in t_lower:
+        return "🏕️"
+    if "sortie" in tp_lower or "nature" in tp_lower or "forêt" in t_lower or "foret" in t_lower:
+        return "🌲"
+    if "réunion" in tp_lower or "reunion" in tp_lower:
+        return "👥"
     if "maroc" in t_lower:
         return "🐫"
     if "belgique" in t_lower:
@@ -3509,8 +3613,6 @@ def get_rencontre_icon(titre, type_ev=""):
         return "🏆"
     if "fête" in t_lower or "grandir" in t_lower:
         return "🎉"
-    if "nature" in t_lower or "forêt" in t_lower:
-        return "🌲"
     return "🏕️"
 
 def get_rencontre_short_title(titre):
@@ -3569,6 +3671,12 @@ def build_calendar_html_table(year, month, rencontres_list):
                     icon = get_rencontre_icon(t_full, ev.get("type", ""))
                     s_titre = get_rencontre_short_title(t_full)
                     s_horaire = get_rencontre_short_horaire(h_full)
+                    
+                    ev_days = get_dates_for_rencontre(ev)
+                    if len(ev_days) > 1 and day_str in ev_days:
+                        j_num = ev_days.index(day_str) + 1
+                        s_titre = f"{s_titre} (J{j_num})"
+
                     escaped_t = t_full.replace('"', '&quot;')
                     escaped_h = h_full.replace('"', '&quot;')
                     
@@ -3662,20 +3770,21 @@ if st.session_state["nav_page"] == "🏠 Accueil":
     """, unsafe_allow_html=True)
 
     today_str = str(date.today())
-    futures = [r for r in current_ronde.get("rencontres", []) if parse_date_to_iso(r.get("date", "")) >= today_str]
-    futures = sorted(futures, key=lambda x: parse_date_to_iso(x.get("date", "")))
-    prochaine = futures[0] if futures else (current_ronde["rencontres"][0] if current_ronde.get("rencontres") else None)
+    all_sorted_r = sort_rencontres(current_ronde.get("rencontres", []))
+    futures = [r for r in all_sorted_r if (parse_date_to_iso(r.get("date_fin")) or parse_date_to_iso(r.get("date", ""))) >= today_str]
+    prochaine = futures[0] if futures else (all_sorted_r[0] if all_sorted_r else None)
 
     col_main_left, col_main_right = st.columns(2, gap="medium")
 
     with col_main_left:
         # 1. Prochaine rencontre
         if prochaine:
-            date_fr = format_date_fr(prochaine.get("date"))
+            date_fr = format_rencontre_dates(prochaine)
+            icon_p = get_rencontre_icon(prochaine.get("titre", ""), prochaine.get("type", ""))
             st.markdown(f"""
                 <div class="dashboard-card">
                     <div style="display:flex; align-items:center; gap:16px;">
-                        <div class="card-icon-bubble">⭐</div>
+                        <div class="card-icon-bubble">{icon_p}</div>
                         <div>
                             <div class="card-title">Prochaine rencontre : {date_fr}</div>
                             <div class="card-subtitle">{prochaine.get('titre')} ({prochaine.get('horaire', '14:00 - 17:00')})</div>
@@ -3886,7 +3995,7 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                 r for r in current_ronde.get("rencontres", [])
                 if any(d.startswith(cur_prefix) for d in get_dates_for_rencontre(r))
             ]
-            mois_rencontres = sorted(mois_rencontres, key=lambda x: parse_date_to_iso(x.get("date", "")))
+            mois_rencontres = sort_rencontres(mois_rencontres)
 
             cal_full_html = build_calendar_html_table(st.session_state["cal_year"], st.session_state["cal_month"], current_ronde.get("rencontres", []))
             st.markdown(cal_full_html, unsafe_allow_html=True)
@@ -3903,9 +4012,10 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
 
             if mois_rencontres:
                 for r in mois_rencontres:
-                    icon_r = get_rencontre_icon(r.get("titre", ""))
-                    with st.expander(f"{icon_r} {format_date_fr(r['date'])} • {r['titre']}", expanded=True):
-                        st.markdown(f"**Horaire :** `{r.get('horaire', '14:00 - 17:00')}`")
+                    icon_r = get_rencontre_icon(r.get("titre", ""), r.get("type", ""))
+                    date_display = format_rencontre_dates(r)
+                    with st.expander(f"{icon_r} {date_display} • {r['titre']}", expanded=True):
+                        st.markdown(f"**Type :** `{r.get('type', 'Rencontre ronde')}` &nbsp;|&nbsp; **Horaire :** `{r.get('horaire', '14:00 - 17:00')}`")
                         st.markdown(f"**Lieu :** {r.get('lieu', 'Local Scout')}")
                         st.markdown(f"**Animateur :** {r.get('animateur', 'Non défini')}")
                         
@@ -3937,19 +4047,24 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                         st.rerun()
 
     elif cur_plan_view == "📋 Liste des rencontres & Déroulés":
-        rencontres_all = sorted(current_ronde.get("rencontres", []), key=lambda x: parse_date_to_iso(x.get("date", "")))
+        rencontres_all = sort_rencontres(current_ronde.get("rencontres", []))
         if rencontres_all:
             for r in rencontres_all:
                 statut_badge = "🟢 À venir" if r.get("statut") == "À venir" else "⚪ Terminé"
+                icon_r = get_rencontre_icon(r.get("titre", ""), r.get("type", ""))
+                date_display = format_rencontre_dates(r)
                 with st.container():
                     st.markdown(f"""
                         <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:16px 20px; margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-weight:700; font-size:16.5px; color:#0F172A;">{r['titre']}</div>
-                                <span style="background:#EFF6FF; color:#1D4ED8; font-weight:600; padding:4px 10px; border-radius:6px; font-size:12px;">{statut_badge}</span>
+                                <div style="font-weight:700; font-size:16.5px; color:#0F172A;">{icon_r} {r['titre']}</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <span style="background:#F1F5F9; color:#334155; font-weight:600; padding:4px 10px; border-radius:6px; font-size:12px;">{r.get('type', 'Rencontre ronde')}</span>
+                                    <span style="background:#EFF6FF; color:#1D4ED8; font-weight:600; padding:4px 10px; border-radius:6px; font-size:12px;">{statut_badge}</span>
+                                </div>
                             </div>
                             <div style="color:#64748B; font-size:13px; margin-top:4px;">
-                                📅 <b>{format_date_fr(r['date'])}</b> &nbsp;|&nbsp; ⏰ <b>{r.get('horaire', '14:00 - 17:00')}</b> &nbsp;|&nbsp; 📍 {r.get('lieu', 'Lieu habituel')} &nbsp;|&nbsp; 👤 {r.get('animateur', 'Équipe')}
+                                📅 <b>{date_display}</b> &nbsp;|&nbsp; ⏰ <b>{r.get('horaire', '14:00 - 17:00')}</b> &nbsp;|&nbsp; 📍 {r.get('lieu', 'Lieu habituel')} &nbsp;|&nbsp; 👤 {r.get('animateur', 'Équipe')}
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
@@ -4102,8 +4217,12 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                 f_col1, f_col2 = st.columns(2)
                 with f_col1:
                     titre_n = st.text_input("Titre de la rencontre *", placeholder="Ex : Grand jeu au parc...")
-                    type_n = st.selectbox("Type d'événement", ["Rencontre ronde", "Sortie nature", "Réunion parents/animateurs", "Week-end de ronde"])
-                    date_n = st.date_input("Date (JJ/MM/AAAA) *", value=date.today(), format="DD/MM/YYYY")
+                    type_n = st.selectbox("Type d'événement", RENCONTRE_TYPES)
+                    c_dn1, c_dn2 = st.columns(2)
+                    with c_dn1:
+                        date_deb_n = st.date_input("Date début *", value=date.today(), format="DD/MM/YYYY")
+                    with c_dn2:
+                        date_fin_n = st.date_input("Date fin *", value=date.today(), format="DD/MM/YYYY")
                 with f_col2:
                     c_th_n1, c_th_n2 = st.columns(2)
                     with c_th_n1:
@@ -4138,12 +4257,15 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                 if submitted_n:
                     if not titre_n:
                         st.error("Le titre de la rencontre est obligatoire.")
+                    elif date_fin_n < date_deb_n:
+                        st.error("La date de fin ne peut pas être antérieure à la date de début.")
                     elif h_fin_n <= h_deb_n:
                         st.error("L'heure de fin de la rencontre doit être strictement postérieure à l'heure de début.")
                     else:
                         animateur_n = combine_animators(sel_anim_n, autre_anim_n)
                         new_r_id = max([x["id"] for x in current_ronde.get("rencontres", [])], default=0) + 1
-                        date_iso = parse_date_to_iso(date_n)
+                        date_iso = parse_date_to_iso(date_deb_n)
+                        date_fin_iso = parse_date_to_iso(date_fin_n)
                         h_deb_str = h_deb_n.strftime("%H:%M")
                         h_fin_str = h_fin_n.strftime("%H:%M")
                         new_item = {
@@ -4151,6 +4273,7 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                             "titre": titre_n,
                             "type": type_n,
                             "date": date_iso,
+                            "date_fin": date_fin_iso,
                             "horaire": f"{h_deb_str} - {h_fin_str}",
                             "lieu": lieu_n,
                             "lieu_adresse": lieu_n,
@@ -4202,8 +4325,10 @@ elif st.session_state["nav_page"] == "📅 Planning des rencontres":
                             "compte_rendu": ""
                         }
                         current_ronde.setdefault("rencontres", []).append(new_item)
+                        current_ronde["rencontres"] = sort_rencontres(current_ronde["rencontres"])
                         save_data(db)
-                        st.session_state["flash_success"] = f"✅ La rencontre '{titre_n}' du {format_date_fr(date_iso)} a été ajoutée !"
+                        formatted_dates_msg = format_rencontre_dates(new_item)
+                        st.session_state["flash_success"] = f"✅ La rencontre '{titre_n}' ({formatted_dates_msg}) a été ajoutée !"
                         st.session_state["planning_view"] = "📋 Liste des rencontres & Déroulés"
                         st.rerun()
         else:

@@ -220,6 +220,7 @@
           "titre": "Fête des Grandir & Découverte du Cadre Symbolique",
           "type": "Rencontre ronde",
           "date": "2026-11-08",
+          "date_fin": "2026-11-08",
           "horaire": "09:30-12:30",
           "lieu": "Parc départemental de la Boucle de Montesson",
           "lieu_adresse": "155 avenue Gabriel Péri, 78360 Montesson",
@@ -266,23 +267,6 @@
             },
             {
               "date": "08/11/2026",
-              "heure_debut": "10:15",
-              "heure_fin": "10:30",
-              "activite": "Grandir avec ses mains et sa tête : Charte de la Ronde",
-              "animateur": "Julien DUBOIS, Jeninobert GNANAPIRAGASAM",
-              "commentaire": "Signer la Charte de vie de la Ronde.",
-              "materiels": [
-                "Feutres",
-                "Grande feuille Charte de Ronde"
-              ],
-              "evaluation": {
-                "comment_s_est_passe": "",
-                "ce_qui_a_marche": "",
-                "ce_qui_n_a_pas_marche": ""
-              }
-            },
-            {
-              "date": "08/11/2026",
               "heure_debut": "10:00",
               "heure_fin": "10:15",
               "activite": "Mise en scène : L'histoire de Tom et Prune & La Malle",
@@ -292,6 +276,23 @@
                 "Malle de ronde",
                 "Panneau de l'Arc-en-Ciel",
                 "Bonnets verts de lutins (Tom et Prune)"
+              ],
+              "evaluation": {
+                "comment_s_est_passe": "",
+                "ce_qui_a_marche": "",
+                "ce_qui_n_a_pas_marche": ""
+              }
+            },
+            {
+              "date": "08/11/2026",
+              "heure_debut": "10:15",
+              "heure_fin": "10:30",
+              "activite": "Grandir avec ses mains et sa tête : Charte de la Ronde",
+              "animateur": "Julien DUBOIS, Jeninobert GNANAPIRAGASAM",
+              "commentaire": "Signer la Charte de vie de la Ronde.",
+              "materiels": [
+                "Feutres",
+                "Grande feuille Charte de Ronde"
               ],
               "evaluation": {
                 "comment_s_est_passe": "",
@@ -493,10 +494,96 @@
           "compte_rendu_grandir": {}
         },
         {
+          "id": 11,
+          "titre": "Week-end territorial des farfadets ",
+          "type": "Week-end de ronde",
+          "date": "2026-11-23",
+          "date_fin": "2026-11-23",
+          "horaire": "14:00 - 17:00",
+          "lieu": "Jambville",
+          "lieu_adresse": "Jambville",
+          "lat": 48.9417,
+          "lon": 2.1645,
+          "animateur": "Tous",
+          "statut": "À venir",
+          "description": "",
+          "imaginaire_rencontre": "",
+          "objectifs": "",
+          "compte_rendu": "",
+          "photo": "",
+          "colonnes_deroule": [],
+          "deroule": [
+            {
+              "date": "23/11/2026",
+              "heure_debut": "14:00",
+              "heure_fin": "14:30",
+              "activite": "Accueil et cri de ronde",
+              "animateur": "Tous",
+              "commentaire": "Rassemblement en cercle",
+              "materiels": [
+                "Foulards de ronde"
+              ],
+              "evaluation": {
+                "comment_s_est_passe": "",
+                "ce_qui_a_marche": "",
+                "ce_qui_n_a_pas_marche": ""
+              }
+            },
+            {
+              "date": "23/11/2026",
+              "heure_debut": "14:30",
+              "heure_fin": "16:15",
+              "activite": "Activité principale",
+              "animateur": "Tous",
+              "commentaire": "Jeu par sizaine",
+              "materiels": [],
+              "evaluation": {
+                "comment_s_est_passe": "",
+                "ce_qui_a_marche": "",
+                "ce_qui_n_a_pas_marche": ""
+              }
+            },
+            {
+              "date": "23/11/2026",
+              "heure_debut": "16:15",
+              "heure_fin": "17:00",
+              "activite": "Goûter & Bilan",
+              "animateur": "Parents",
+              "commentaire": "Nettoyage et fin",
+              "materiels": [
+                "Goûter et compotes"
+              ],
+              "evaluation": {
+                "comment_s_est_passe": "",
+                "ce_qui_a_marche": "",
+                "ce_qui_n_a_pas_marche": ""
+              }
+            }
+          ],
+          "materiels": [
+            {
+              "id": 1,
+              "nom": "Foulards de ronde",
+              "qui_amene": "Tous",
+              "photo": "",
+              "ok": false
+            },
+            {
+              "id": 2,
+              "nom": "Goûter et compotes",
+              "qui_amene": "Parents",
+              "photo": "",
+              "ok": false
+            }
+          ],
+          "compte_rendu_grandir": {}
+        },
+        {
           "id": 2,
           "titre": "Le Grand Départ de France : À travers nos Régions !",
           "type": "Rencontre ronde",
           "date": "2026-11-29",
+          "date_fin": "2026-11-29",
           "horaire": "13:30-17:00",
           "lieu": "Local Scout & Parc Municipal",
           "lieu_adresse": "Notre Dame du Val & Parc Municipal, Sartrouville",
@@ -685,6 +772,7 @@
           "titre": "Escale de la Paix : La Lumière de Bethléem & La Grande Bonne Action",
           "type": "Rencontre ronde",
           "date": "2026-12-13",
+          "date_fin": "2026-12-13",
           "horaire": "13:30 - 17:30",
           "lieu": "Local Scout & Résidence des Aînés de Sartrouville",
           "lieu_adresse": "Notre Dame du Val & Résidence Aînés, Sartrouville",
@@ -855,6 +943,7 @@
           "titre": "Escale au Maroc : Les Trésors de l'Atlas & Caravane des Épices",
           "type": "Rencontre ronde",
           "date": "2027-01-17",
+          "date_fin": "2027-01-17",
           "horaire": "10:30 - 15:30",
           "lieu": "Local Scout & Parc Municipal",
           "lieu_adresse": "Notre Dame du Val & Parc Municipal, Sartrouville",
@@ -1061,6 +1150,7 @@
           "titre": "Escale au Portugal : Les Caravelles des Grands Navigateurs",
           "type": "Rencontre ronde",
           "date": "2027-02-28",
+          "date_fin": "2027-02-28",
           "horaire": "10:30 - 15:30",
           "lieu": "Local Scout & Bords de Seine",
           "lieu_adresse": "Bords de Seine & Notre Dame du Val, Sartrouville",
@@ -1262,6 +1352,7 @@
           "titre": "Escale en Belgique : Le Royaume de la BD & Les Petits Détectives",
           "type": "Rencontre ronde",
           "date": "2027-03-21",
+          "date_fin": "2027-03-21",
           "horaire": "10:30 - 15:30",
           "lieu": "Local Scout & Forêt",
           "lieu_adresse": "Notre Dame du Val & Forêt, Sartrouville",
@@ -1437,8 +1528,9 @@
         {
           "id": 7,
           "titre": "Camp Territorial : Le Grand Sommet International des Explorateurs",
-          "type": "Week-end de ronde",
+          "type": "Camp d'été",
           "date": "2027-04-24",
+          "date_fin": "2027-04-25",
           "horaire": "Samedi 14:00 - Dimanche 16:00",
           "lieu": "Base Scoute Territoriale",
           "lieu_adresse": "Base Scoute Territoriale (Île-de-France)",
@@ -1700,6 +1792,7 @@
           "titre": "Escale au Cambodge : Au Cœur de la Cité d'Angkor",
           "type": "Rencontre ronde",
           "date": "2027-05-23",
+          "date_fin": "2027-05-23",
           "horaire": "10:00 - 15:30",
           "lieu": "Local Scout & Parc Municipal",
           "lieu_adresse": "Notre Dame du Val & Parc Municipal, Sartrouville",
@@ -1898,6 +1991,7 @@
           "titre": "Clôture du Tour du Monde en 80 Jours : Le Pari Gagné de Phileas Fogg !",
           "type": "Rencontre ronde",
           "date": "2027-06-13",
+          "date_fin": "2027-06-13",
           "horaire": "10:00 - 16:00",
           "lieu": "Local Scout & Parc boisé",
           "lieu_adresse": "Notre Dame du Val & Parc boisé, Sartrouville",
@@ -2079,8 +2173,9 @@
         {
           "id": 10,
           "titre": "Grand Camp d'Été : Le Grand Rassemblement Inter-Rondes en Pleine Nature",
-          "type": "Week-end de ronde",
+          "type": "Camp d'été",
           "date": "2027-07-02",
+          "date_fin": "2027-07-05",
           "horaire": "Du 2 au 5 juillet (4 jours sous la tente)",
           "lieu": "Base Nature & Camp Scout de Plein Air",
           "lieu_adresse": "Base Nature Scoute (Camp d'été)",
